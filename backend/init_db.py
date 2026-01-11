@@ -2,7 +2,7 @@ import os
 from app import create_app, db
 # Importamos todos los modelos para asegurarnos de que SQLAlchemy los reconozca
 # antes de llamar a create_all().
-from app.models import User, Client, Vehicle, Service, WorkOrder, OrderItem
+from app.models import User, Client, Vehicle, Service, WorkOrder, OrderItem, Payment
 
 def init_db():
     """

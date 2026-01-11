@@ -280,3 +280,49 @@ class OrderItem(db.Model):
             'service_name': self.service.name if self.service else None, # Helper útil para mostrar en UI
             'price_at_moment': self.price_at_moment
         }
+
+# ==============================================================================
+# Modelo Payment (Pago)
+# ==============================================================================
+class Payment(db.Model):
+    """
+    Representa un pago realizado por una orden de trabajo.
+    
+    Cada pago está asociado a una única orden de trabajo.
+    
+    Atributos:
+        id (int): Identificador único del pago.
+        work_order_id (int): FK a la orden de trabajo asociada.
+        amount (float): Monto del pago.
+        payment_method (str): Método de pago (efectivo, tarjeta, transferencia, etc.).
+        status (str): Estado del pago ('pagado', 'pendiente').
+        created_at (datetime): Fecha y hora del pago.
+    
+    Relaciones:
+        work_order (relationship): Relación uno-a-uno con WorkOrder.
+    """
+    __tablename__ = 'payments'
+
+    id = db.Column(db.Integer, primary_key=True)
+    work_order_id = db.Column(db.Integer, db.ForeignKey('work_orders.id'), nullable=False)
+    amount = db.Column(db.Float, nullable=False)
+    payment_method = db.Column(db.String(50), nullable=False) # efectivo, tarjeta
+    status = db.Column(db.String(20), default='pendiente')    # pagado, pendiente
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    # Relación: Una orden puede tener varios pagos (o uno).
+    work_order = db.relationship('WorkOrder', backref=db.backref('payments', lazy=True))
+
+    def to_dict(self):
+        """
+        Convierte el objeto Payment a un diccionario.
+        """
+        return {
+            'id': self.id,
+            'work_order_id': self.work_order_id,
+            'amount': self.amount,
+            'payment_method': self.payment_method,
+            'status': self.status,
+            'created_at': self.created_at.isoformat() if self.created_at else None
+        }
+

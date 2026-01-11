@@ -6,6 +6,8 @@ import ClientsPage from './pages/ClientsPage';
 import OrdersPage from './pages/OrdersPage';
 import CreateOrderPage from './pages/CreateOrderPage';
 import OrderDetailPage from './pages/OrderDetailPage';
+import ServicesPage from './pages/ServicesPage';
+import PaymentsPage from './pages/PaymentsPage';
 import MainLayout from './layouts/MainLayout';
 import PropTypes from 'prop-types';
 
@@ -32,7 +34,8 @@ function App() {
                     <Route path="/orders" element={<OrdersPage />} />
                     <Route path="/orders/new" element={<CreateOrderPage />} />
                     <Route path="/orders/:id" element={<OrderDetailPage />} />
-                    <Route path="/services" element={<div className="p-4">Gestión de Servicios (En construcción)</div>} />
+                    <Route path="/services" element={<ServicesPage />} />
+                    <Route path="/payments" element={<PaymentsPage />} />
                 </Route>
             </Route>
         </Routes>

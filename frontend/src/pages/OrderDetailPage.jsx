@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import api from '../api/axios';
 
+import PaymentModal from '../components/PaymentModal';
+
 const OrderDetailPage = () => {
     const { id } = useParams();
     const [order, setOrder] = useState(null);
@@ -11,6 +13,8 @@ const OrderDetailPage = () => {
     const [selectedServiceId, setSelectedServiceId] = useState('');
     const [addingItem, setAddingItem] = useState(false);
     const [loading, setLoading] = useState(true);
+    // Payment Modal State
+    const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
 
     const fetchOrder = useCallback(async () => {
         try {
@@ -65,6 +69,32 @@ const OrderDetailPage = () => {
         }
     };
 
+    // Handler triggered by Modal Confirmation
+    const handleConfirmPayment = async (method) => {
+        try {
+            // 1. Cambiar estado a finalizado
+            await api.put(`/orders/${id}/status`, { status: 'finalizado' });
+            
+            // 2. Crear registro de pago
+            await api.post('/payments/', {
+                work_order_id: order.id,
+                amount: order.total,
+                payment_method: method,
+                status: 'pagado'
+            });
+
+            // Cerrar modal y recargar
+            setIsPaymentModalOpen(false);
+            fetchOrder();
+            // Optional: Redirect or Show Success Toast
+            alert("✅ Factura generada y orden finalizada exitosamente.");
+        } catch (error) {
+            console.error("Error generating invoice", error);
+            alert("Error al generar factura: " + (error.response?.data?.msg || error.message));
+            throw error; // Let modal know it failed
+        }
+    };
+
     if (loading) return <div>Cargando orden...</div>;
     if (!order) return <div>Orden no encontrada</div>;
 
@@ -105,13 +135,21 @@ const OrderDetailPage = () => {
                                 Iniciar Trabajo
                             </button>
                         )}
-                        {order.status === 'en_progreso' && (
-                            <button 
-                                onClick={() => handleStatusChange('finalizado')}
-                                className="bg-green-600 hover:bg-green-700 text-white text-sm px-3 py-2 rounded"
-                            >
-                                Finalizar Orden
-                            </button>
+                         {order.status === 'en_progreso' && (
+                            <>
+                                <button 
+                                    onClick={() => handleStatusChange('finalizado')}
+                                    className="bg-green-600 hover:bg-green-700 text-white text-sm px-3 py-2 rounded"
+                                >
+                                    Finalizar Orden
+                                </button>
+                                <button 
+                                    onClick={() => setIsPaymentModalOpen(true)}
+                                    className="bg-purple-600 hover:bg-purple-700 text-white text-sm px-3 py-2 rounded ml-2 shadow-sm"
+                                >
+                                    Generar Factura
+                                </button>
+                            </>
                         )}
                     </div>
                 </div>
@@ -163,7 +201,7 @@ const OrderDetailPage = () => {
                     <div className="bg-white shadow rounded-lg mb-6">
                         <div className="px-4 py-5 border-b border-gray-200 sm:px-6 flex justify-between items-center">
                             <h3 className="text-lg leading-6 font-medium text-gray-900">Servicios Realizados</h3>
-                            <span className="text-2xl font-bold text-gray-800">${order.total_price.toFixed(2)}</span>
+                            <span className="text-2xl font-bold text-gray-800">${order.total ? order.total.toFixed(2) : '0.00'}</span>
                         </div>
                         
                          {/* Add Service Form */}
@@ -220,6 +258,14 @@ const OrderDetailPage = () => {
                     &larr; Volver a la Lista de Órdenes
                 </Link>
             </div>
+
+            {/* Payment Modal */}
+            <PaymentModal 
+                isOpen={isPaymentModalOpen}
+                order={order}
+                onClose={() => setIsPaymentModalOpen(false)}
+                onConfirm={handleConfirmPayment}
+            />
         </div>
     );
 };

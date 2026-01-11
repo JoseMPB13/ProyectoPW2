@@ -32,4 +32,7 @@ def create_app():
     from app.routes.ai import ai_bp
     app.register_blueprint(ai_bp)
 
+    from app.routes.payments import payments_bp
+    app.register_blueprint(payments_bp)
+
     return app
