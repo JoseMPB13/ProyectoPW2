@@ -1,6 +1,12 @@
 from flask import Blueprint, request, jsonify
 
-# Creamos el Blueprint para las rutas de IA
+# ==============================================================================
+# Capa de RUTAS (Controlador) - Inteligencia Artificial
+# ==============================================================================
+# Endpoints para la comunicación con modelos de IA (Mock / Stub actualmente).
+# Futura integración con LangChain / OpenAI.
+# ==============================================================================
+
 ai_bp = Blueprint('ai', __name__, url_prefix='/ai')
 
 # ==============================================================================
@@ -9,8 +15,15 @@ ai_bp = Blueprint('ai', __name__, url_prefix='/ai')
 @ai_bp.route('/ask', methods=['POST'])
 def ask_ai():
     """
-    Recibe una pregunta y devuelve una respuesta simulada.
-    Preparado para integrar modelos LLM (LangChain, OpenAI, etc.).
+    Recibe una pregunta y devuelve una respuesta simulada (Stub).
+    Diseñado para integrar posteriormente lógica de RAG o LLMs.
+
+    Request Body:
+        question (str): Pregunta del usuario.
+        context (str, optional): Contexto adicional.
+
+    Returns:
+        JSON: Respuesta generada por la IA (o Mock).
     """
     data = request.get_json()
     

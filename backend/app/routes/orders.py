@@ -3,7 +3,16 @@ from app.services.order_service import OrderService
 from app.models import User
 from flask_jwt_extended import jwt_required, get_jwt_identity
 
-# Creamos el Blueprint. Usaremos prefijo vacío para definir rutas absolutas como /services y /orders
+# ==============================================================================
+# Capa de RUTAS (Controlador) - Orders
+# ==============================================================================
+# Esta capa se encarga EXCLUSIVAMENTE de:
+# 1. Recibir la petición HTTP (GET, POST, etc.)
+# 2. Extraer y validar básicamente los datos de entrada (JSON, Params)
+# 3. Llamar a la Capa de Servicios (OrderService) para ejecutar la lógica
+# 4. Retornar la respuesta HTTP adecuada (JSON + Status Code)
+# ==============================================================================
+
 orders_bp = Blueprint('orders', __name__)
 
 # ==============================================================================
@@ -14,20 +23,30 @@ orders_bp = Blueprint('orders', __name__)
 def create_service():
     """
     Crea un nuevo tipo de servicio en el catálogo.
-    Solo permitido para usuarios con rol 'admin' o 'mecanico' (aunque el requerimiento dice admin).
+    Endpoint protegido para administradores.
+
+    Request Body:
+        name (str): Nombre del servicio.
+        base_price (float): Precio base.
+        description (str): Descripción opcional.
+
+    Returns:
+        JSON: Objeto del servicio creado.
     """
     current_user_id = get_jwt_identity()
     user = User.query.get(current_user_id)
 
-    # Verificación de rol (asumiendo que solo admin puede crear servicios)
+    # Verificación de rol (Controlador valida permisos HTTP)
     if not user or user.role != 'admin':
         return jsonify({"msg": "Acceso denegado. Se requieren permisos de administrador"}), 403
 
     data = request.get_json()
+    # Validación básica de entrada
     if not data or not data.get('name') or not data.get('base_price'):
         return jsonify({"msg": "Faltan datos obligatorios (name, base_price)"}), 400
 
     try:
+        # Llamada al servicio para lógica de negocio
         new_service = OrderService.create_service(
             name=data['name'],
             base_price=float(data['base_price']),
@@ -42,6 +61,10 @@ def create_service():
 # ==============================================================================
 @orders_bp.route('/services', methods=['GET'])
 def get_services():
+    """
+    Obtiene la lista de todos los servicios disponibles.
+    Público (o protegido según requerimiento, aquí público).
+    """
     services = OrderService.get_all_services()
     return jsonify([s.to_dict() for s in services]), 200
 
@@ -53,7 +76,13 @@ def get_services():
 def create_order():
     """
     Crea una nueva orden de trabajo vinculada a un vehículo.
-    El usuario creador se toma del token JWT.
+    Usuario autenticado es el creador.
+
+    Request Body:
+        vehicle_id (int): ID del vehículo.
+
+    Returns:
+        JSON: La orden creada.
     """
     current_user_id = get_jwt_identity()
     data = request.get_json()
@@ -62,12 +91,14 @@ def create_order():
         return jsonify({"msg": "Se requiere vehicle_id"}), 400
     
     try:
+        # Delegamos al servicio
         new_order = OrderService.create_order(
             vehicle_id=data['vehicle_id'],
             user_id=current_user_id
         )
         return jsonify({"msg": "Orden creada exitosamente", "order": new_order.to_dict()}), 201
     except ValueError as e:
+        # Capturamos excepciones de negocio específicas (ej: vehículo no encontrado)
         return jsonify({"msg": str(e)}), 404
     except Exception as e:
         return jsonify({"msg": f"Error al crear orden: {str(e)}"}), 500
@@ -80,17 +111,31 @@ def create_order():
 def add_order_item(order_id):
     """
     Agrega un servicio a una orden existente.
+
+    Path Params:
+        order_id (int): ID de la orden.
+    
+    Request Body:
+        service_id (int): ID del servicio a agregar.
+
+    Returns:
+        JSON: Item creado y nuevo total de la orden.
     """
     data = request.get_json()
     if not data or not data.get('service_id'):
         return jsonify({"msg": "Se requiere service_id"}), 400
 
     try:
+        # Delegamos la lógica compleja (crear item + actualizar total orden) al servicio
         new_item, order_total = OrderService.add_order_item(
             order_id=order_id,
             service_id=data['service_id']
         )
-        return jsonify({"msg": "Servicio agregado a la orden", "item": new_item.to_dict(), "order_total": order_total}), 201
+        return jsonify({
+            "msg": "Servicio agregado a la orden", 
+            "item": new_item.to_dict(), 
+            "order_total": order_total
+        }), 201
     except ValueError as e:
         return jsonify({"msg": str(e)}), 404
     except Exception as e:
@@ -111,6 +156,7 @@ def get_order(order_id):
     
     response = order.to_dict()
     
+    # Enriquecimiento de respuesta para el Frontend (opcional pero útil)
     if order.vehicle:
           response['vehicle_info'] = order.vehicle.to_dict()
           if order.vehicle.owner:

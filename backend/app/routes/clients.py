@@ -1,7 +1,13 @@
 from flask import Blueprint, request, jsonify
 from app.services.client_service import ClientService
 
-# Creamos el Blueprint para las rutas de clientes
+# ==============================================================================
+# Capa de RUTAS (Controlador) - Clients
+# ==============================================================================
+# Gestiona las peticiones HTTP relacionadas con clientes y sus vehículos.
+# Delega la lógica de negocio a ClientService.
+# ==============================================================================
+
 clients_bp = Blueprint('clients', __name__, url_prefix='/clients')
 
 # ==============================================================================
@@ -11,7 +17,16 @@ clients_bp = Blueprint('clients', __name__, url_prefix='/clients')
 def create_client():
     """
     Crea un nuevo cliente.
-    Espera un JSON con: first_name, last_name, email (opcional), phone (opcional), address (opcional).
+
+    Request Body:
+        first_name (str): Nombre.
+        last_name (str): Apellido.
+        email (str, optional): Email.
+        phone (str, optional): Teléfono.
+        address (str, optional): Dirección.
+
+    Returns:
+        JSON: Cliente creado.
     """
     data = request.get_json()
 
@@ -55,7 +70,16 @@ def get_clients():
 def add_vehicle(client_id):
     """
     Agrega un vehículo asociado a un cliente específico.
-    Espera JSON con: plate, brand, model, year, vin (opcional).
+    
+    Path Params:
+        client_id (int): ID del cliente.
+
+    Request Body:
+        plate (str): Placa.
+        brand (str): Marca.
+        model (str): Modelo.
+        year (int): Año.
+        vin (str, optional): VIN.
     """
     data = request.get_json()
 

@@ -3,8 +3,28 @@ from app.models import Client, Vehicle
 from sqlalchemy.exc import IntegrityError
 
 class ClientService:
+    """
+    Servicio para la gestión de Clientes y sus Vehículos.
+    """
+
     @staticmethod
     def create_client(first_name, last_name, email=None, phone=None, address=None):
+        """
+        Crea un nuevo cliente.
+
+        Args:
+            first_name (str): Nombre.
+            last_name (str): Apellido.
+            email (str, optional): Email.
+            phone (str, optional): Teléfono.
+            address (str, optional): Dirección.
+
+        Returns:
+            Client: Cliente creado.
+
+        Raises:
+            ValueError: Si el email ya existe (IntegrityError).
+        """
         new_client = Client(
             first_name=first_name,
             last_name=last_name,
@@ -22,14 +42,33 @@ class ClientService:
 
     @staticmethod
     def get_all_clients():
+        """Retorna todos los clientes registrados."""
         return Client.query.all()
         
     @staticmethod
     def get_client_by_id(client_id):
+        """Retorna un cliente por ID."""
         return Client.query.get(client_id)
 
     @staticmethod
     def add_vehicle(client_id, plate, brand, model, year, vin=None):
+        """
+        Asocia un vehículo a un cliente.
+
+        Args:
+            client_id (int): ID del cliente dueño.
+            plate (str): Placa.
+            brand (str): Marca.
+            model (str): Modelo.
+            year (int): Año.
+            vin (str, optional): VIN.
+
+        Returns:
+            Vehicle: Vehículo creado.
+
+        Raises:
+            ValueError: Si cliente no existe o placa/VIN duplicados.
+        """
         client = Client.query.get(client_id)
         if not client:
             raise ValueError("Cliente no encontrado")
@@ -53,6 +92,12 @@ class ClientService:
 
     @staticmethod
     def get_client_vehicles(client_id):
+        """
+        Obtiene los vehículos de un cliente específico.
+        
+        Raises:
+            ValueError: Si el cliente no existe.
+        """
         client = Client.query.get(client_id)
         if not client:
             raise ValueError("Cliente no encontrado")
