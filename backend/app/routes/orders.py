@@ -1,10 +1,9 @@
 from flask import Blueprint, request, jsonify
-from app import db
-from app.models import Service, WorkOrder, OrderItem, User, Vehicle
+from app.services.order_service import OrderService
+from app.models import User
 from flask_jwt_extended import jwt_required, get_jwt_identity
 
 # Creamos el Blueprint. Usaremos prefijo vacío para definir rutas absolutas como /services y /orders
-# O mejor, un prefijo base '/api' si quisiéramos, pero seguiremos el patrón de auth/clients
 orders_bp = Blueprint('orders', __name__)
 
 # ==============================================================================
@@ -28,18 +27,14 @@ def create_service():
     if not data or not data.get('name') or not data.get('base_price'):
         return jsonify({"msg": "Faltan datos obligatorios (name, base_price)"}), 400
 
-    new_service = Service(
-        name=data['name'],
-        description=data.get('description', ''),
-        base_price=float(data['base_price'])
-    )
-
     try:
-        db.session.add(new_service)
-        db.session.commit()
+        new_service = OrderService.create_service(
+            name=data['name'],
+            base_price=float(data['base_price']),
+            description=data.get('description', '')
+        )
         return jsonify({"msg": "Servicio creado exitosamente", "service": new_service.to_dict()}), 201
     except Exception as e:
-        db.session.rollback()
         return jsonify({"msg": f"Error al crear servicio: {str(e)}"}), 500
 
 # ==============================================================================
@@ -47,7 +42,7 @@ def create_service():
 # ==============================================================================
 @orders_bp.route('/services', methods=['GET'])
 def get_services():
-    services = Service.query.all()
+    services = OrderService.get_all_services()
     return jsonify([s.to_dict() for s in services]), 200
 
 # ==============================================================================
@@ -66,24 +61,15 @@ def create_order():
     if not data or not data.get('vehicle_id'):
         return jsonify({"msg": "Se requiere vehicle_id"}), 400
     
-    # Validar existencia del vehículo
-    vehicle = Vehicle.query.get(data['vehicle_id'])
-    if not vehicle:
-        return jsonify({"msg": "Vehículo no encontrado"}), 404
-
-    new_order = WorkOrder(
-        vehicle_id=data['vehicle_id'],
-        user_id=current_user_id,
-        status='pendiente',
-        total=0.0
-    )
-
     try:
-        db.session.add(new_order)
-        db.session.commit()
+        new_order = OrderService.create_order(
+            vehicle_id=data['vehicle_id'],
+            user_id=current_user_id
+        )
         return jsonify({"msg": "Orden creada exitosamente", "order": new_order.to_dict()}), 201
+    except ValueError as e:
+        return jsonify({"msg": str(e)}), 404
     except Exception as e:
-        db.session.rollback()
         return jsonify({"msg": f"Error al crear orden: {str(e)}"}), 500
 
 # ==============================================================================
@@ -94,38 +80,20 @@ def create_order():
 def add_order_item(order_id):
     """
     Agrega un servicio a una orden existente.
-    Congela el precio del servicio en el momento de la agregación.
-    Actualiza el total de la orden.
     """
     data = request.get_json()
     if not data or not data.get('service_id'):
         return jsonify({"msg": "Se requiere service_id"}), 400
 
-    order = WorkOrder.query.get(order_id)
-    if not order:
-        return jsonify({"msg": "Orden no encontrada"}), 404
-
-    service = Service.query.get(data['service_id'])
-    if not service:
-        return jsonify({"msg": "Servicio no encontrado"}), 404
-
-    # Crear el item de la orden
-    new_item = OrderItem(
-        work_order_id=order_id,
-        service_id=service.id,
-        price_at_moment=service.base_price
-    )
-
     try:
-        db.session.add(new_item)
-        
-        # Actualizar el total de la orden
-        order.total += service.base_price
-        
-        db.session.commit()
-        return jsonify({"msg": "Servicio agregado a la orden", "item": new_item.to_dict(), "order_total": order.total}), 201
+        new_item, order_total = OrderService.add_order_item(
+            order_id=order_id,
+            service_id=data['service_id']
+        )
+        return jsonify({"msg": "Servicio agregado a la orden", "item": new_item.to_dict(), "order_total": order_total}), 201
+    except ValueError as e:
+        return jsonify({"msg": str(e)}), 404
     except Exception as e:
-        db.session.rollback()
         return jsonify({"msg": f"Error al agregar item: {str(e)}"}), 500
 
 # ==============================================================================
@@ -137,18 +105,12 @@ def get_order(order_id):
     """
     Obtiene el detalle completo de una orden: Cliente, Vehículo, Items.
     """
-    order = WorkOrder.query.get(order_id)
+    order = OrderService.get_order_by_id(order_id)
     if not order:
         return jsonify({"msg": "Orden no encontrada"}), 404
     
-    # El método to_dict() del modelo WorkOrder ya debería incluir la anidación necesaria,
-    # pero podemos enriquecerla aquí si es necesario.
-    # Por ahora confiamos en el to_dict() que definimos en models.py
-    
     response = order.to_dict()
     
-    # Agregar info extra del vehículo/cliente si no estuviera ya (El modelo Vehicle tiene la FK pero la relación backref está en Client)
-    # WorkOrder -> Vehicle -> Client
     if order.vehicle:
           response['vehicle_info'] = order.vehicle.to_dict()
           if order.vehicle.owner:
@@ -169,20 +131,10 @@ def update_order_status(order_id):
     if not data or not data.get('status'):
         return jsonify({"msg": "Se requiere status"}), 400
 
-    new_status = data['status']
-    valid_statuses = ['pendiente', 'en_progreso', 'finalizado', 'entregado']
-    
-    if new_status not in valid_statuses:
-        return jsonify({"msg": f"Estado inválido. Permitidos: {', '.join(valid_statuses)}"}), 400
-
-    order = WorkOrder.query.get(order_id)
-    if not order:
-        return jsonify({"msg": "Orden no encontrada"}), 404
-
     try:
-        order.status = new_status
-        db.session.commit()
+        order = OrderService.update_order_status(order_id, data['status'])
         return jsonify({"msg": "Estado actualizado", "status": order.status}), 200
+    except ValueError as e:
+        return jsonify({"msg": str(e)}), 400
     except Exception as e:
-        db.session.rollback()
         return jsonify({"msg": f"Error al actualizar estado: {str(e)}"}), 500
