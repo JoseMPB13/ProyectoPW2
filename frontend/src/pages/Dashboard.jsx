@@ -1,198 +1,159 @@
-import { useEffect, useState } from 'react';
-import api from '../api/axios';
-import { Link } from 'react-router-dom';
+import { useState } from 'react';
+import { Search, Filter, Download, Plus, Eye, Edit2, Trash2 } from 'lucide-react';
 
-const MetricCard = ({ title, value, color, icon, footer }) => (
-    <div className={`bg-white rounded-xl shadow-sm border border-gray-100 p-6 flex flex-col justify-between hover:shadow-md transition-shadow duration-200 border-l-4 ${color}`}>
-        <div className="flex justify-between items-start">
-            <div>
-                <p className="text-sm font-medium text-gray-500 uppercase tracking-wider">{title}</p>
-                <h3 className="text-3xl font-bold text-gray-800 mt-2">{value}</h3>
-            </div>
-            <div className={`p-3 rounded-lg ${color.replace('border-', 'bg-').replace('500', '100')}`}>
-                {icon}
-            </div>
-        </div>
-        {footer && (
-            <div className="mt-4 pt-4 border-t border-gray-50 text-sm text-gray-500">
-                {footer}
-            </div>
-        )}
-    </div>
-);
+// Mock data based on the image provided
+const MOCK_VEHICLES = [
+    { id: 1, patente: "ABC-123", marca: "Toyota Corolla 2020", vin: "1HGBH41JXMN109186", cliente: "Juan Pérez", estado: "En reparación", fecha: "08/01/2026", tecnico: "Carlos Ruiz" },
+    { id: 2, patente: "XYZ-789", marca: "Honda Civic 2019", vin: "2HGFG12878H543210", cliente: "Maria González", estado: "Listo", fecha: "05/01/2026", tecnico: "Roberto Silva" },
+    { id: 3, patente: "DEF-456", marca: "Ford Ranger 2021", vin: "3FADP4EJ9FM123456", cliente: "Pedro Martínez", estado: "En taller", fecha: "10/01/2026", tecnico: "Luis Vargas" },
+    { id: 4, patente: "GHI-321", marca: "Chevrolet Cruze 2018", vin: "1G1BE5SM8J7654321", cliente: "Ana López", estado: "En reparación", fecha: "07/01/2026", tecnico: "Carlos Ruiz" },
+    { id: 5, patente: "JKL-654", marca: "Nissan Sentra 2022", vin: "3N1AB7AP8KY987654", cliente: "Roberto Sánchez", estado: "Entregado", fecha: "03/01/2026", tecnico: "Roberto Silva" }
+];
 
-const Dashboard = () => {
-    const [metrics, setMetrics] = useState(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState('');
-
-    useEffect(() => {
-        const fetchMetrics = async () => {
-            try {
-                const response = await api.get('/reports/dashboard');
-                setMetrics(response.data);
-            } catch (err) {
-                console.error(err);
-                setError(err.response?.status === 403 
-                    ? 'No tienes permisos de administrador para ver este dashboard.' 
-                    : 'Error al cargar las métricas.'
-                );
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchMetrics();
-    }, []);
-
-    if (loading) return (
-        <div className="flex justify-center items-center h-full">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-600"></div>
-        </div>
-    );
-    
-    if (error) {
-         return (
-            <div className="bg-red-50 border-l-4 border-red-500 text-red-700 p-6 rounded-lg shadow-sm" role="alert">
-                <p className="font-bold flex items-center">
-                    <svg className="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                    Error de Acceso
-                </p>
-                <p className="mt-2">{error}</p>
-            </div>
-         )
-    }
+const StatusBadge = ({ status }) => {
+    const styles = {
+        'En reparación': 'bg-orange-100 text-orange-700 border-orange-200',
+        'Listo': 'bg-green-100 text-green-700 border-green-200',
+        'En taller': 'bg-yellow-100 text-yellow-700 border-yellow-200',
+        'Entregado': 'bg-gray-100 text-gray-700 border-gray-200',
+    };
+    const defaultStyle = 'bg-gray-100 text-gray-600';
 
     return (
-        <div className="space-y-8">
-            {/* Header Section */}
-            <div className="flex justify-between items-center">
-                <h3 className="text-2xl font-bold text-gray-800">Resumen General</h3>
-                <div className="flex space-x-3">
-                    <button className="px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 shadow-sm">
-                        Descargar Reporte
+        <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${styles[status] || defaultStyle}`}>
+            {status}
+        </span>
+    );
+};
+
+const Dashboard = () => {
+    const [searchTerm, setSearchTerm] = useState('');
+
+    return (
+        <div className="space-y-6">
+            {/* Header Area */}
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div>
+                    <h1 className="text-2xl font-bold text-gray-900">Gestión de Vehículos</h1>
+                    <div className="flex items-center text-sm text-gray-500 mt-1">
+                        <span>Inicio</span>
+                        <span className="mx-2">/</span>
+                        <span className="text-blue-600 font-medium">Autos</span>
+                    </div>
+                </div>
+                <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 font-medium shadow-lg hover:shadow-xl transition-all">
+                    <Plus size={18} />
+                    Nuevo Vehículo
+                </button>
+            </div>
+
+            {/* Filters Bar */}
+            <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200 flex flex-col md:flex-row gap-4 justify-between items-center">
+                <div className="relative flex-1 w-full md:max-w-lg">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+                    <input
+                        type="text"
+                        placeholder="Buscar por patente, marca o modelo..."
+                        className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                </div>
+
+                <div className="flex gap-3 w-full md:w-auto">
+                    <select className="px-4 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option>Todos</option>
+                        <option>En reparación</option>
+                        <option>Listo</option>
+                        <option>Entregado</option>
+                    </select>
+
+                    <button className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50 text-gray-700">
+                        <Filter size={16} />
+                        Más filtros
                     </button>
-                    <Link to="/orders/new" className="px-4 py-2 bg-brand-600 text-white rounded-lg text-sm font-medium hover:bg-brand-700 shadow-sm flex items-center">
-                        <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" /></svg>
-                        Nueva Orden
-                    </Link>
+
+                    <button className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50 text-gray-700">
+                        <Download size={16} />
+                        Exportar
+                    </button>
                 </div>
             </div>
-            
-            {/* Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <MetricCard 
-                    title="Total Órdenes" 
-                    value={metrics?.total_orders_month || 0} 
-                    color="border-brand-500"
-                    icon={<svg className="w-6 h-6 text-brand-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>}
-                    footer="Órdenes registradas este mes"
-                />
-                 <MetricCard 
-                    title="Ingresos Estimados" 
-                    value={`$${metrics?.estimated_income?.toLocaleString(undefined, { minimumFractionDigits: 2 }) || '0.00'}`}
-                    color="border-green-500"
-                    icon={<svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}
-                     footer={<span className="text-green-600 font-medium">+12% vs mes anterior</span>}
-                />
-                 <MetricCard 
-                    title="Órdenes Pendientes" 
-                    value={metrics?.orders_by_status?.pendiente || 0}
-                    color="border-yellow-500"
-                    icon={<svg className="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}
-                    footer="Requieren atención inmediata"
-                />
-                 <MetricCard 
-                    title="Órdenes Finalizadas" 
-                    value={metrics?.orders_by_status?.finalizado || 0}
-                    color="border-purple-500"
-                    icon={<svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}
-                    footer="Completadas con éxito"
-                />
-            </div>
 
-            {/* Charts/Tables Section */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                {/* Orders by Status Table */}
-                <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                    <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
-                        <h4 className="text-lg font-bold text-gray-800">Estado de Órdenes</h4>
-                        <button className="text-brand-600 hover:text-brand-800 text-sm font-medium">Ver todas</button>
-                    </div>
-                    <div className="p-0">
-                         {metrics?.orders_by_status && Object.keys(metrics.orders_by_status).length > 0 ? (
-                            <table className="w-full">
-                                <thead className="bg-gray-50 text-xs uppercase text-gray-500">
-                                    <tr>
-                                        <th className="px-6 py-3 text-left tracking-wider">Estado</th>
-                                        <th className="px-6 py-3 text-right tracking-wider">Cantidad</th>
-                                        <th className="px-6 py-3 text-right tracking-wider">% Total</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-gray-100">
-                                    {Object.entries(metrics.orders_by_status).map(([status, count]) => {
-                                        const total = Object.values(metrics.orders_by_status).reduce((a, b) => a + b, 0);
-                                        const percentage = total > 0 ? Math.round((count / total) * 100) : 0;
-                                        const statusColors = {
-                                            pendiente: 'text-yellow-600 bg-yellow-50',
-                                            en_progreso: 'text-blue-600 bg-blue-50',
-                                            finalizado: 'text-green-600 bg-green-50',
-                                            cancelado: 'text-red-600 bg-red-50'
-                                        };
-                                        const colorClass = statusColors[status] || 'text-gray-600 bg-gray-50';
-
-                                        return (
-                                            <tr key={status} className="hover:bg-gray-50 transition-colors">
-                                                <td className="px-6 py-4 whitespace-nowrap">
-                                                    <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold uppercase ${colorClass}`}>
-                                                        {status.replace('_', ' ')}
-                                                    </span>
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-right font-medium text-gray-700">
-                                                    {count}
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-right text-gray-500">
-                                                    <div className="flex items-center justify-end gap-2">
-                                                        <span className="text-xs">{percentage}%</span>
-                                                        <div className="w-16 h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                                                            <div className={`h-full rounded-full ${colorClass.split(' ')[0].replace('text-', 'bg-')}`} style={{ width: `${percentage}%` }}></div>
-                                                        </div>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        );
-                                    })}
-                                </tbody>
-                            </table>
-                        ) : (
-                            <div className="p-8 text-center text-gray-500">
-                                No hay datos disponibles para mostrar.
-                            </div>
-                        )}
-                    </div>
-                </div>
-
-                {/* Simulated Recent Activity or Placeholder */}
-                <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                     <div className="px-6 py-4 border-b border-gray-100 bg-gray-50">
-                        <h4 className="text-lg font-bold text-gray-800">Actividad Reciente</h4>
-                    </div>
-                    <div className="p-6">
-                        <div className="space-y-6">
-                            {[1, 2, 3].map((_, idx) => (
-                                <div key={idx} className="flex gap-4">
-                                     <div className="flex-shrink-0">
-                                        <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center">
-                                            <svg className="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+            {/* Table */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                <div className="overflow-x-auto">
+                    <table className="w-full">
+                        <thead className="bg-gray-50 border-b border-gray-100">
+                            <tr>
+                                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider w-4">
+                                    <input type="checkbox" className="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+                                </th>
+                                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Patente</th>
+                                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Marca/Modelo</th>
+                                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">VIN</th>
+                                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Cliente</th>
+                                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Estado</th>
+                                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Fecha Ingreso</th>
+                                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Técnico</th>
+                                <th className="px-6 py-4 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100">
+                            {MOCK_VEHICLES.map((vehicle) => (
+                                <tr key={vehicle.id} className="hover:bg-blue-50/50 transition-colors">
+                                    <td className="px-6 py-4">
+                                        <input type="checkbox" className="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+                                    </td>
+                                    <td className="px-6 py-4">
+                                        <span className="font-bold text-blue-600 hover:text-blue-800 cursor-pointer">{vehicle.patente}</span>
+                                    </td>
+                                    <td className="px-6 py-4">
+                                        <div className="text-sm font-medium text-gray-900">{vehicle.marca.split(' ').slice(0, 1).join(' ')}</div>
+                                        <div className="text-xs text-gray-500">{vehicle.marca.split(' ').slice(1).join(' ')}</div>
+                                    </td>
+                                    <td className="px-6 py-4 text-xs text-gray-500 font-mono">
+                                        {vehicle.vin}
+                                    </td>
+                                    <td className="px-6 py-4 text-sm text-blue-600 hover:underline cursor-pointer">
+                                        {vehicle.cliente}
+                                    </td>
+                                    <td className="px-6 py-4">
+                                        <StatusBadge status={vehicle.estado} />
+                                    </td>
+                                    <td className="px-6 py-4 text-sm text-gray-500">
+                                        {vehicle.fecha}
+                                    </td>
+                                    <td className="px-6 py-4">
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center text-xs font-bold text-gray-600 border border-gray-200">
+                                                {vehicle.tecnico.substring(0, 2).toUpperCase()}
+                                            </div>
+                                            <span className="text-sm text-gray-700">{vehicle.tecnico}</span>
                                         </div>
-                                    </div>
-                                    <div>
-                                        <p className="text-sm font-medium text-gray-900">Nueva orden registrada</p>
-                                        <p className="text-sm text-gray-500">Hace {idx * 15 + 5} minutos por <strong>Admin</strong></p>
-                                    </div>
-                                </div>
+                                    </td>
+                                    <td className="px-6 py-4 text-right">
+                                        <div className="flex items-center justify-end gap-2">
+                                            <button className="p-1.5 text-gray-400 hover:text-blue-600 transition-colors"><Eye size={18} /></button>
+                                            <button className="p-1.5 text-gray-400 hover:text-green-600 transition-colors"><Edit2 size={18} /></button>
+                                            <button className="p-1.5 text-gray-400 hover:text-red-600 transition-colors"><Trash2 size={18} /></button>
+                                        </div>
+                                    </td>
+                                </tr>
                             ))}
-                        </div>
+                        </tbody>
+                    </table>
+                </div>
+
+                {/* Pagination */}
+                <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between">
+                    <span className="text-sm text-gray-500">Mostrando 1-5 de 156 registros</span>
+                    <div className="flex items-center gap-2">
+                        <button className="px-3 py-1 border border-gray-200 rounded-md text-sm hover:bg-gray-50 disabled:opacity-50">Anterior</button>
+                        <button className="px-3 py-1 bg-blue-600 text-white rounded-md text-sm">1</button>
+                        <button className="px-3 py-1 border border-gray-200 rounded-md text-sm hover:bg-gray-50">2</button>
+                        <button className="px-3 py-1 border border-gray-200 rounded-md text-sm hover:bg-gray-50">3</button>
+                        <button className="px-3 py-1 border border-gray-200 rounded-md text-sm hover:bg-gray-50">Siguiente</button>
                     </div>
                 </div>
             </div>
