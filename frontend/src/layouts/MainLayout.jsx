@@ -1,7 +1,7 @@
 import { useAuth } from '../context/AuthContext';
 import { Link, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import PropTypes from 'prop-types';
-import { LayoutDashboard, Users, Wrench, Briefcase, CreditCard, LogOut, CarFront } from 'lucide-react';
+import { LayoutDashboard, Users, Wrench, Briefcase, CreditCard, LogOut, CarFront, Tag } from 'lucide-react';
 
 const SidebarItem = ({ to, label, icon }) => {
     const location = useLocation();
@@ -54,9 +54,9 @@ const MainLayout = () => {
                     {/* Updated items based on User Image */}
                     <div className="px-6 mb-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">Principal</div>
                     <SidebarItem
-                        to="/dashboard"
-                        label="Gestión de Autos"
-                        icon={<CarFront size={20} />}
+                        to="/orders"
+                        label="Órdenes de Trabajo"
+                        icon={<LayoutDashboard size={20} />}
                     />
 
                     <div className="px-6 mt-8 mb-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">Personal</div>
@@ -81,6 +81,11 @@ const MainLayout = () => {
                         to="/payments"
                         label="Pagos"
                         icon={<CreditCard size={20} />}
+                    />
+                    <SidebarItem
+                        to="/services"
+                        label="Servicios"
+                        icon={<Tag size={20} />}
                     />
                 </nav>
 

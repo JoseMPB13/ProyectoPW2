@@ -59,11 +59,24 @@ def create_payment():
 @jwt_required()
 def get_payment_history():
     """
-    Obtiene el historial completo de pagos.
+    Obtiene el historial de pagos paginado.
+    Query Params: page, per_page
     """
     try:
-        payments = Payment.query.order_by(Payment.created_at.desc()).all()
-        return jsonify([p.to_dict() for p in payments]), 200
+        page = request.args.get('page', 1, type=int)
+        per_page = request.args.get('per_page', 10, type=int)
+        
+        pagination = Payment.query.order_by(Payment.created_at.desc()).paginate(
+            page=page, per_page=per_page, error_out=False
+        )
+        
+        return jsonify({
+            'items': [p.to_dict() for p in pagination.items],
+            'total': pagination.total,
+            'pages': pagination.pages,
+            'current_page': pagination.page,
+            'per_page': pagination.per_page
+        }), 200
     except Exception as e:
         return jsonify({"msg": f"Error al obtener historial: {str(e)}"}), 500
 

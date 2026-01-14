@@ -1,3 +1,8 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Fix for "className.indexOf is not a function" error when clicking icons */
+svg {
+  pointer-events: none;
+}

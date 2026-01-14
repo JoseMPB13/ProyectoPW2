@@ -54,12 +54,23 @@ def create_client():
 @clients_bp.route('', methods=['GET'])
 def get_clients():
     """
-    Obtiene la lista de todos los clientes registrados.
+    Obtiene lista de clientes con paginación y filtros.
+    Query Params: page, per_page, search.
     """
     try:
-        clients = ClientService.get_all_clients()
-        # Convertimos la lista de objetos a lista de diccionarios
-        return jsonify([client.to_dict() for client in clients]), 200
+        page = request.args.get('page', 1, type=int)
+        per_page = request.args.get('per_page', 10, type=int)
+        search = request.args.get('search', type=str)
+
+        pagination = ClientService.get_all_clients(page, per_page, search)
+        
+        return jsonify({
+            'items': [c.to_dict() for c in pagination.items],
+            'total': pagination.total,
+            'pages': pagination.pages,
+            'current_page': pagination.page,
+            'per_page': pagination.per_page
+        }), 200
     except Exception as e:
         return jsonify({"msg": f"Error al obtener clientes: {str(e)}"}), 500
 

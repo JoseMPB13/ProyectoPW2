@@ -89,3 +89,18 @@ class AuthService:
             User | None: Objeto usuario o None.
         """
         return User.query.get(user_id)
+
+    @staticmethod
+    def get_users_by_role(role=None):
+        """
+        Obtiene usuarios filtrados por rol.
+        
+        Args:
+           role (str, optional): Rol para filtrar (admin, mecanico, recepcion).
+        
+        Returns:
+           list[User]: Lista de usuarios encontrados.
+        """
+        if role:
+            return User.query.filter_by(role=role).all()
+        return User.query.all()

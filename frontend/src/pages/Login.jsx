@@ -24,7 +24,7 @@ const Login = () => {
         setSuccessMsg('');
         try {
             await login(email, password);
-            navigate('/dashboard');
+            navigate('/orders');
         } catch (err) {
             setError(err.response?.data?.msg || 'Error al iniciar sesión. Verifica tus credenciales.');
         }

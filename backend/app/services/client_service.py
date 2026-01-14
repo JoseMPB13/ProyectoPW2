@@ -41,9 +41,29 @@ class ClientService:
             raise ValueError("El email ya está registrado para otro cliente")
 
     @staticmethod
-    def get_all_clients():
-        """Retorna todos los clientes registrados."""
-        return Client.query.all()
+    def get_all_clients(page=1, per_page=10, search=None):
+        """
+        Retorna clientes con paginación y búsqueda.
+        
+        Args:
+            page (int): Página actual.
+            per_page (int): Items por página.
+            search (str, optional): Término de búsqueda (nombre, apellido, email).
+
+        Returns:
+            Pagination: Objeto de paginación SQLAlchemy.
+        """
+        query = Client.query
+        
+        if search:
+            search_term = f"%{search}%"
+            query = query.filter(
+                (Client.first_name.ilike(search_term)) |
+                (Client.last_name.ilike(search_term)) |
+                (Client.email.ilike(search_term))
+            )
+            
+        return query.order_by(Client.created_at.desc()).paginate(page=page, per_page=per_page, error_out=False)
         
     @staticmethod
     def get_client_by_id(client_id):

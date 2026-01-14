@@ -110,18 +110,52 @@ def create_order():
 @jwt_required()
 def get_orders():
     """
-    Obtiene la lista de todas las órdenes de trabajo.
+    Obtiene la lista de órdenes de trabajo con paginación y filtros.
+    Query Params: page, per_page, status, search.
     """
     try:
-        orders = OrderService.get_all_orders()
-        response = []
-        for order in orders:
+        page = request.args.get('page', 1, type=int)
+        per_page = request.args.get('per_page', 10, type=int)
+        status = request.args.get('status', type=str)
+        search = request.args.get('search', type=str)
+
+        # Mapeo de status si viene del frontend con nombres "bonitos"
+        # Opcional: Si el frontend envía 'En reparación', convertimos a 'en_progreso'
+        status_map = {
+            'En reparación': 'en_progreso',
+            'Listo': 'finalizado',
+            'En taller': 'pendiente',
+            'Entregado': 'entregado'
+        }
+        if status in status_map:
+            status = status_map[status]
+
+        pagination = OrderService.get_all_orders(page, per_page, status, search)
+        
+        response_items = []
+        for order in pagination.items:
              order_dict = order.to_dict()
-             # Enriquecer con info básica de vehiculo para la tabla
+             # Enriquecer con info extendida para Dashboard
              if order.vehicle:
                  order_dict['vehicle_plate'] = order.vehicle.plate
-             response.append(order_dict)
-        return jsonify(response), 200
+                 order_dict['vehicle_brand'] = order.vehicle.brand
+                 order_dict['vehicle_model'] = order.vehicle.model
+                 order_dict['vehicle_vin'] = order.vehicle.vin
+                 if order.vehicle.owner:
+                     order_dict['client_name'] = f"{order.vehicle.owner.first_name} {order.vehicle.owner.last_name}"
+                     
+             if order.creator:
+                 order_dict['technician_name'] = order.creator.username # Usamos username como técnico por ahora
+
+             response_items.append(order_dict)
+
+        return jsonify({
+            'items': response_items,
+            'total': pagination.total,
+            'pages': pagination.pages,
+            'current_page': pagination.page,
+            'per_page': pagination.per_page
+        }), 200
     except Exception as e:
         return jsonify({"msg": f"Error al obtener órdenes: {str(e)}"}), 500
 

@@ -3,13 +3,14 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import Login from './pages/Login';
 import RegisterPage from './pages/RegisterPage'; // New Route
 import LandingPage from './pages/LandingPage';   // New Route
-import Dashboard from './pages/Dashboard';
 import ClientsPage from './pages/ClientsPage';
 import OrdersPage from './pages/OrdersPage';
 import CreateOrderPage from './pages/CreateOrderPage';
 import OrderDetailPage from './pages/OrderDetailPage';
 import ServicesPage from './pages/ServicesPage';
 import PaymentsPage from './pages/PaymentsPage';
+import TechniciansPage from './pages/TechniciansPage';
+import WorkersPage from './pages/WorkersPage';
 import MainLayout from './layouts/MainLayout';
 import ChatWidget from './components/ChatWidget'; // Import ChatWidget
 // import PropTypes from 'prop-types'; // Unused in this file currently
@@ -35,8 +36,7 @@ function App() {
                     {/* Protected Routes */}
                     <Route element={<PrivateRoute />}>
                         <Route element={<MainLayout />}>
-                            {/* Dashboard moved to /dashboard to avoid conflict with Landing Page */}
-                            <Route path="/dashboard" element={<Dashboard />} />
+
 
                             <Route path="/clients" element={<ClientsPage />} />
                             <Route path="/orders" element={<OrdersPage />} />
@@ -44,6 +44,8 @@ function App() {
                             <Route path="/orders/:id" element={<OrderDetailPage />} />
                             <Route path="/services" element={<ServicesPage />} />
                             <Route path="/payments" element={<PaymentsPage />} />
+                            <Route path="/technicians" element={<TechniciansPage />} />
+                            <Route path="/workers" element={<WorkersPage />} />
                         </Route>
                     </Route>
 

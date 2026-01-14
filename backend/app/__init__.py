@@ -35,4 +35,7 @@ def create_app():
     from app.routes.payments import payments_bp
     app.register_blueprint(payments_bp)
 
+    from app.routes.services import services_bp
+    app.register_blueprint(services_bp, url_prefix='/services')
+
     return app

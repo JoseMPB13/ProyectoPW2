@@ -140,14 +140,44 @@ class OrderService:
         return WorkOrder.query.get(order_id)
 
     @staticmethod
-    def get_all_orders():
+    def get_all_orders(page=1, per_page=10, status=None, search=None):
         """
-        Obtiene todas las órdenes registradas, ordenadas por fecha de creación descendente.
+        Obtiene órdenes registradas con paginación, filtros y búsqueda.
         
+        Args:
+            page (int): Número de página.
+            per_page (int): Items por página.
+            status (str, optional): Estado para filtrar.
+            search (str, optional): Término de búsqueda (patente, marca, modelo).
+
         Returns:
-            list[WorkOrder]: Lista de todas las órdenes.
+            Pagination: Objeto de paginación de SQLAlchemy.
         """
-        return WorkOrder.query.order_by(WorkOrder.created_at.desc()).all()
+        query = WorkOrder.query.join(Vehicle) # Join con Vehicle para búsqueda
+
+        # 1. Filtro por Estado
+        if status and status != 'Todos':
+            # Mapeo de estados del frontend ("En reparación") a backend ("en_progreso") si es necesario
+            # Asumimos que el frontend envía los valores correctos o mapeamos aquí
+            # "En reparación" -> "en_progreso", "Listo" -> "finalizado" ??
+            # Vamos a usar ilike para flexibilidad o normalizar en endpoint
+            query = query.filter(WorkOrder.status == status)
+        
+        # 2. Búsqueda (Search)
+        if search:
+            search_term = f"%{search}%"
+            query = query.filter(
+                (Vehicle.plate.ilike(search_term)) |
+                (Vehicle.brand.ilike(search_term)) |
+                (Vehicle.model.ilike(search_term)) |
+                (Vehicle.vin.ilike(search_term))
+            )
+        
+        # 3. Ordenamiento
+        query = query.order_by(WorkOrder.created_at.desc())
+        
+        # 4. Paginación
+        return query.paginate(page=page, per_page=per_page, error_out=False)
 
 
     @staticmethod

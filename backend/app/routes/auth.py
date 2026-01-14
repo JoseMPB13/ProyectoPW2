@@ -102,3 +102,24 @@ def get_current_user():
         return jsonify({"msg": "Usuario no encontrado"}), 404
 
     return jsonify(user.to_dict()), 200
+
+# ==============================================================================
+# Endpoint: Listar Usuarios (Admin o Internal)
+# ==============================================================================
+@auth_bp.route('/users', methods=['GET'])
+@jwt_required()
+def get_users():
+    """
+    Obtiene lista de usuarios, opcionalmente filtrada por rol.
+    Query Params: role
+    """
+    role = request.args.get('role', type=str)
+    
+    # Podríamos restringir esto solo a admins
+    current_user_id = get_jwt_identity()
+    user = AuthService.get_user_by_id(current_user_id)
+    # Ejemplo de restricción muy básica (opcional)
+    # if user.role != 'admin': return jsonify({"msg": "Forbidden"}), 403
+
+    users = AuthService.get_users_by_role(role)
+    return jsonify([u.to_dict() for u in users]), 200
