@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sistema Taller Mecánico</title>
+    <link rel="stylesheet" href="css/styles.css" />
+    <!-- Iconos opcionales (puedes usar FontAwesome o similar si quisieras, pero por ahora vanilla) -->
+  </head>
+  <body>
+    <div class="app-container">
+      <!-- Sidebar Navigation -->
+      <aside class="sidebar">
+        <div class="sidebar-header">
+          <h2>Taller App</h2>
+        </div>
+            <nav class="sidebar-nav">
+                <ul>
+                    <li><a href="#" class="active" data-view="vehicles">Gestión de Autos</a></li>
+                    <li><a href="#" data-view="tecnicos">Técnicos</a></li>
+                    <li><a href="#" data-view="trabajadores">Trabajadores</a></li>
+                    <li><a href="#" data-view="clientes">Clientes</a></li>
+                    <li><a href="#" data-view="pagos">Pagos</a></li>
+                </ul>
+            </nav>
+        <div class="sidebar-footer">
+          <button id="logoutBtn">Cerrar Sesión</button>
+        </div>
+      </aside>
+
+      <!-- Main Content Area -->
+      <main class="main-content">
+        <header class="top-bar">
+          <h1>Dashboard</h1>
+          <div class="user-info">
+            <span id="userName">Usuario</span>
+          </div>
+        </header>
+
+        <div id="contentArea" class="content-area">
+          <!-- El contenido dinámico se cargará aquí -->
+          <div class="card">
+            <h3>Bienvenido al Sistema</h3>
+            <p>Selecciona una opción del menú para comenzar.</p>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <script type="module" src="js/app.js"></script>
+  </body>
+</html>
