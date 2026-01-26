@@ -3,6 +3,11 @@ import AuthController from './controllers/AuthController.js';
 import VehicleController from './controllers/VehicleController.js';
 import ClientController from './controllers/ClientController.js';
 import AiController from './controllers/AiController.js';
+import VehicleModel from './models/VehicleModel.js';
+import VehicleView from './views/VehicleView.js';
+import DashboardController from './controllers/DashboardController.js';
+import DashboardModel from './models/DashboardModel.js';
+import DashboardView from './views/DashboardView.js';
 
 /**
  * Controlador Principal de la Aplicación (App)
@@ -13,7 +18,17 @@ class App {
         this.api = new API();
         // Inicializar AuthController, pasando callback de éxito
         this.authController = new AuthController(() => this.onLoginSuccess());
-        this.vehicleController = new VehicleController();
+        
+        // Inyección de Dependencias para VehicleController
+        this.vehicleModel = new VehicleModel(this.api);
+        this.vehicleView = new VehicleView();
+        this.vehicleController = new VehicleController(this.vehicleModel, this.vehicleView);
+        
+        // Inyección de Dependencias para DashboardController
+        this.dashboardModel = new DashboardModel(this.api);
+        this.dashboardView = new DashboardView();
+        this.dashboardController = new DashboardController(this.dashboardModel, this.dashboardView);
+
         this.clientController = new ClientController();
         this.aiController = new AiController();
         this.init();
@@ -138,8 +153,7 @@ class App {
         // Enrutamiento
         switch(viewName) {
             case 'dashboard':
-                // Por ahora redireccionamos dashboard a vehicles o mostramos resumen
-                this.vehicleController.init(); 
+                this.dashboardController.init(); 
                 break;
             case 'vehicles':
                 this.vehicleController.init();

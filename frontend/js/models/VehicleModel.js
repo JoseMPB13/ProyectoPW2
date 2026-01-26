@@ -6,8 +6,8 @@ import API from '../utils/api.js';
  * Nota: Por ahora utilizamos el endpoint de órdenes ya que contiene información de vehículos.
  */
 export default class VehicleModel {
-    constructor() {
-        this.api = new API();
+    constructor(api) {
+        this.api = api;
     }
 
     /**

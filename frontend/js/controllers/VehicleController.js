@@ -5,9 +5,13 @@ import VehicleView from '../views/VehicleView.js';
  * Controlador de Vehículos
  */
 export default class VehicleController {
-    constructor() {
-        this.model = new VehicleModel();
-        this.view = new VehicleView();
+    /**
+     * @param {VehicleModel} model
+     * @param {VehicleView} view
+     */
+    constructor(model, view) {
+        this.model = model;
+        this.view = view;
     }
 
     /**
