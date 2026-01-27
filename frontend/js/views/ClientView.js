@@ -46,10 +46,10 @@ export default class ClientView {
         
         return clients.map(c => `
             <div class="client-card" data-id="${c.id}">
-                <div class="client-avatar">${c.name.charAt(0)}</div>
+                <div class="client-avatar">${(c.nombre || '').charAt(0)}</div>
                 <div class="client-info">
-                    <h4>${c.name}</h4>
-                    <p>${c.email}</p>
+                    <h4>${c.nombre} ${c.apellido_p}</h4>
+                    <p>${c.correo}</p>
                 </div>
             </div>
         `).join('');
@@ -60,12 +60,14 @@ export default class ClientView {
      */
     renderClientDetails(client) {
         const pane = document.getElementById('clientDetailPane');
+        const nombreCompleto = `${client.nombre} ${client.apellido_p} ${client.apellido_m || ''}`;
+        
         pane.innerHTML = `
             <div class="detail-header">
-                <div class="client-avatar large">${client.name.charAt(0)}</div>
+                <div class="client-avatar large">${(client.nombre || '').charAt(0)}</div>
                 <div>
-                    <h2>${client.name}</h2>
-                    <p class="text-secondary">ID: ${client.id}</p>
+                    <h2>${nombreCompleto}</h2>
+                    <p class="text-secondary">ID: ${client.id} | CI: ${client.ci || 'N/A'}</p>
                 </div>
             </div>
 
@@ -80,15 +82,15 @@ export default class ClientView {
                         <div class="info-grid">
                             <div class="info-item">
                                 <label>Email:</label>
-                                <span>${client.email}</span>
+                                <span>${client.correo || '-'}</span>
                             </div>
                             <div class="info-item">
-                                <label>Teléfono:</label>
-                                <span>${client.phone || '-'}</span>
+                                <label>Celular:</label>
+                                <span>${client.celular || '-'}</span>
                             </div>
                             <div class="info-item">
                                 <label>Dirección:</label>
-                                <span>${client.address || '-'}</span>
+                                <span>${client.direccion || '-'}</span>
                             </div>
                             <div class="info-item">
                                 <label>Última Visita:</label>

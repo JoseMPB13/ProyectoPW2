@@ -106,7 +106,7 @@ def add_vehicle(client_id):
             brand=data['brand'],
             model=data['model'],
             year=data['year'],
-            vin=data.get('vin')
+            color=data.get('color') or data.get('vin') # Backward compatibility or new field
         )
         return jsonify({"msg": "Vehículo agregado exitosamente", "vehicle": new_vehicle.to_dict()}), 201
     except ValueError as e:

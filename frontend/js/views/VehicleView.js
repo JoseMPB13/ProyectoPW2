@@ -1,4 +1,5 @@
 import ModalView from './components/ModalView.js';
+import { getStatusConfig, ORDER_STATES_LABELS } from '../utils/constants.js';
 
 /**
  * Vista de Vehículos
@@ -25,7 +26,7 @@ export default class VehicleView {
                 <table class="data-table">
                     <thead>
                         <tr>
-                            <th>Patente</th>
+                            <th>Placa</th>
                             <th>Marca/Modelo</th>
                             <th>VIN</th>
                             <th>Cliente</th>
@@ -54,18 +55,19 @@ export default class VehicleView {
         }
 
         return vehicles.map(v => {
-            const clientName = v.client ? v.client.name : 'N/A';
-            const techName = v.technician ? v.technician.name : 'Sin asignar';
-            const statusBadge = this._getStatusBadge(v.status);
+            // Nota: El backend ahora retorna nombres planos como 'client_name', 'technician_name'
+            const clientName = v.client_name || 'N/A';
+            const techName = v.technician_name || 'Sin asignar';
+            const statusBadge = this._getStatusBadge(v.estado_nombre);
             
             return `
                 <tr>
-                    <td class="font-bold">${v.vehicle_plate || '-'}</td>
-                    <td>${v.brand} ${v.model}</td>
+                    <td class="font-bold">${v.placa || '-'}</td>
+                    <td>${v.marca} ${v.modelo}</td>
                     <td>${v.vin || '-'}</td>
                     <td>${clientName}</td>
                     <td>${statusBadge}</td>
-                    <td>${v.entry_date || '-'}</td>
+                    <td>${v.fecha_ingreso || '-'}</td>
                     <td>${techName}</td>
                     <td class="actions-cell">
                         <button class="btn-icon" title="Ver"><i class="icon-eye"></i>Ver</button>
@@ -80,14 +82,7 @@ export default class VehicleView {
      * Retorna el HTML del badge según estado.
      */
     _getStatusBadge(status) {
-        const map = {
-            'pending': { label: 'Pendiente', class: 'badge-warning' },
-            'in_progress': { label: 'En Proceso', class: 'badge-info' },
-            'completed': { label: 'Terminado', class: 'badge-success' },
-            'delivered': { label: 'Entregado', class: 'badge-secondary' }
-        };
-
-        const config = map[status] || { label: status, class: 'badge-default' };
+        const config = getStatusConfig(status);
         return `<span class="badge ${config.class}">${config.label}</span>`;
     }
 
@@ -99,59 +94,63 @@ export default class VehicleView {
     }
 
     openNewVehicleModal() {
+        // Obtenemos opciones de estado desde constantes
+        const statusOptions = Object.keys(ORDER_STATES_LABELS).map(key => 
+            `<option value="${key}">${ORDER_STATES_LABELS[key].label}</option>`
+        ).join('');
+
         const formHTML = `
             <form id="newVehicleForm" class="modal-form">
                 <div class="form-grid">
                     <div class="form-group">
-                        <label>Patente</label>
-                        <input type="text" name="vehicle_plate" placeholder="ABCD-12">
+                        <label>Placa</label>
+                        <input type="text" name="placa" placeholder="ABCD-12">
                     </div>
                     <div class="form-group">
-                        <label>VIN</label>
-                        <input type="text" name="vin" placeholder="1234567890ABC..." maxlength="17">
+                        <label>VIN (Opcional)</label>
+                        <input type="text" name="vin" placeholder="..." maxlength="17">
                     </div>
                     <div class="form-group">
                         <label>Marca</label>
-                        <select name="brand">
+                        <select name="marca">
                             <option value="">Seleccionar...</option>
                             <option value="Toyota">Toyota</option>
                             <option value="Ford">Ford</option>
-                            <option value="Chevrolet">Chevrolet</option>
                             <option value="Nissan">Nissan</option>
                             <option value="Hyundai">Hyundai</option>
+                            <option value="Kia">Kia</option>
                         </select>
                     </div>
                     <div class="form-group">
                         <label>Modelo</label>
-                        <input type="text" name="model" placeholder="Ej: Corolla">
+                        <input type="text" name="modelo" placeholder="Ej: Corolla">
                     </div>
                     <div class="form-group">
                         <label>Año</label>
-                        <input type="number" name="year" placeholder="2024" min="1900" max="2100">
+                        <input type="number" name="anio" placeholder="2024" min="1900" max="2100">
                     </div>
                     <div class="form-group">
                         <label>Color</label>
                         <input type="text" name="color" placeholder="Ej: Rojo">
                     </div>
                     <div class="form-group">
-                        <label>Kilometraje</label>
-                        <input type="number" name="mileage" placeholder="0">
-                    </div>
-                    <div class="form-group">
-                        <label>Estado</label>
-                        <select name="status">
-                            <option value="pending">Pendiente</option>
-                            <option value="in_progress">En Proceso</option>
-                            <option value="completed">Terminado</option>
+                        <label>Estado Inicial</label>
+                        <select name="estado_nombre">
+                           ${statusOptions}
                         </select>
                     </div>
                 </div>
                 <div class="form-group full-width">
-                    <label>Observaciones</label>
-                    <textarea name="observations" rows="3" placeholder="Detalles iniciales..."></textarea>
+                    <label>Problema Reportado</label>
+                    <textarea name="problema_reportado" rows="3" placeholder="Detalles..."></textarea>
+                </div>
+                <!-- Nota: Se requiere seleccionar cliente, en una app real sería un select dinámico -->
+                <div class="form-group">
+                    <label>ID Cliente (Temporal)</label>
+                    <input type="number" name="cliente_id" placeholder="ID del cliente">
                 </div>
                 <div class="modal-actions">
-                    <button type="button" class="btn-outline" id="cancelBtn">Cancelar</button>
+                     <button type="button" class="btn-outline" id="cancelBtn">Cancelar</button>
                     <button type="submit" class="btn-primary">Guardar Vehículo</button>
                 </div>
             </form>

@@ -17,30 +17,35 @@ ENV/
 .env
 .env.local
 
-# Database
-instance/
-*.db
-*.sqlite
-*.sqlite3
-
 # IDEs
 .vscode/
 .idea/
 *.swp
 *.swo
-
-# Logs and temporary files
-*.log
-out.txt
-out.log
-
-# Test files
-test_*.py
-debug_*.py
+*~
 
 # OS
 .DS_Store
 Thumbs.db
+desktop.ini
 
-# Pytest
-.pytest_cache/
+# Logs
+*.log
+out.txt
+out.log
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+instance/
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Build
+dist/
+build/

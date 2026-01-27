@@ -10,7 +10,15 @@ def create_app():
     app = Flask(__name__)
     app.config.from_object("app.config.config.Config")
 
-    CORS(app)
+    # Configuración CORS para permitir peticiones desde el frontend
+    CORS(app, 
+         resources={r"/*": {"origins": "*"}},
+         allow_headers=["Content-Type", "Authorization", "Access-Control-Allow-Credentials"],
+         methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+         supports_credentials=True,
+         expose_headers=["Content-Type", "Authorization"]
+    )
+    
     db.init_app(app)
     jwt.init_app(app)
 
@@ -37,5 +45,8 @@ def create_app():
 
     from app.routes.services import services_bp
     app.register_blueprint(services_bp, url_prefix='/services')
+
+    from app.routes.inventory import inventory_bp
+    app.register_blueprint(inventory_bp, url_prefix='/inventory')
 
     return app

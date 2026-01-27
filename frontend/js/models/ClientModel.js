@@ -36,28 +36,31 @@ export default class ClientModel {
         return [
             { 
                 id: 1, 
-                name: 'Juan Perez', 
-                email: 'juan@example.com', 
-                phone: '+56 9 1234 5678', 
-                address: 'Calle Falsa 123',
+                nombre: 'Juan',
+                apellido_p: 'Perez',
+                correo: 'juan@example.com', 
+                celular: '+56 9 1234 5678', 
+                direccion: 'Calle Falsa 123',
                 vehicles_count: 2,
                 last_visit: '2025-01-20'
             },
             { 
                 id: 2, 
-                name: 'Maria Gomez', 
-                email: 'maria@example.com', 
-                phone: '+56 9 8765 4321', 
-                address: 'Av. Siempre Viva 742',
+                nombre: 'Maria',
+                apellido_p: 'Gomez',
+                correo: 'maria@example.com', 
+                celular: '+56 9 8765 4321', 
+                direccion: 'Av. Siempre Viva 742',
                 vehicles_count: 1,
                 last_visit: '2025-01-15'
             },
             { 
                 id: 3, 
-                name: 'Empresa Logística S.A.', 
-                email: 'contacto@empresa.com', 
-                phone: '+56 2 2222 3333', 
-                address: 'Parque Industrial Lote 5',
+                nombre: 'Empresa',
+                apellido_p: 'Logística S.A.',
+                correo: 'contacto@empresa.com', 
+                celular: '+56 2 2222 3333', 
+                direccion: 'Parque Industrial Lote 5',
                 vehicles_count: 5,
                 last_visit: '2025-01-22'
             }

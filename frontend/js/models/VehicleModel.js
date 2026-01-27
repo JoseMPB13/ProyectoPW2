@@ -38,36 +38,36 @@ export default class VehicleModel {
         return [
             {
                 id: 1,
-                vehicle_plate: 'ABCD-123',
-                brand: 'Toyota',
-                model: 'Corolla',
+                placa: 'ABCD-12',
+                marca: 'Toyota',
+                modelo: 'Corolla',
                 vin: '1N4AL...',
-                client: { name: 'Juan Perez' },
-                status: 'pending',
-                entry_date: '2025-01-20',
-                technician: { name: 'Carlos Mecánico' }
+                client_name: 'Juan Perez',
+                estado_nombre: 'Pendiente',
+                fecha_ingreso: '2025-01-20',
+                technician_name: 'Carlos Mecánico'
             },
             {
                 id: 2,
-                vehicle_plate: 'XYZ-987',
-                brand: 'Ford',
-                model: 'Ranger',
+                placa: 'XYZ-987',
+                marca: 'Ford',
+                modelo: 'Ranger',
                 vin: '2FMPK...',
-                client: { name: 'Empresa S.A.' },
-                status: 'in_progress',
-                entry_date: '2025-01-22',
-                technician: { name: 'Ana Técnica' }
+                client_name: 'Empresa S.A.',
+                estado_nombre: 'En Diagnostico',
+                fecha_ingreso: '2025-01-22',
+                technician_name: 'Ana Técnica'
             },
             {
                 id: 3,
-                vehicle_plate: 'JKL-456',
-                brand: 'Honda',
-                model: 'Civic',
+                placa: 'JKL-456',
+                marca: 'Honda',
+                modelo: 'Civic',
                 vin: 'JHM...',
-                client: { name: 'Maria Gomez' },
-                status: 'completed',
-                entry_date: '2025-01-15',
-                technician: { name: 'Carlos Mecánico' }
+                client_name: 'Maria Gomez',
+                estado_nombre: 'Entregado',
+                fecha_ingreso: '2025-01-15',
+                technician_name: 'Carlos Mecánico'
             }
         ];
     }

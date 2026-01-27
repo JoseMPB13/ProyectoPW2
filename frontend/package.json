@@ -1,0 +1,11 @@
+{
+  "name": "frontend-vanilla",
+  "version": "1.0.0",
+  "description": "Frontend Vanilla JS",
+  "scripts": {
+    "dev": "npx serve ."
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}

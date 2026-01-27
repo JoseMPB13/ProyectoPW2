@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify
 from app import db
-from app.models import Payment, WorkOrder
+from app.models import Pago, Orden
 from sqlalchemy import func
 from flask_jwt_extended import jwt_required
 
@@ -20,26 +20,26 @@ def create_payment():
     """
     data = request.get_json()
     
+    # Aceptar tanto orden_id como work_order_id para compatibilidad
+    orden_id = data.get('orden_id') or data.get('work_order_id')
+    monto = data.get('monto') or data.get('amount')
+    metodo_pago = data.get('metodo_pago') or data.get('payment_method')
+    
     # Validación de datos básicos
-    if not data or not data.get('work_order_id') or not data.get('amount') or not data.get('payment_method'):
-        return jsonify({"msg": "Faltan datos obligatorios (work_order_id, amount, payment_method)"}), 400
-
-    work_order_id = data.get('work_order_id')
-    amount = data.get('amount')
-    payment_method = data.get('payment_method')
-    status = data.get('status', 'pagado') # Por defecto pagado si no se especifica
+    if not orden_id or not monto or not metodo_pago:
+        return jsonify({"msg": "Faltan datos obligatorios (orden_id, monto, metodo_pago)"}), 400
 
     # Verificar existencia de la orden
-    work_order = WorkOrder.query.get(work_order_id)
+    work_order = Orden.query.get(orden_id)
     if not work_order:
         return jsonify({"msg": "Orden de trabajo no encontrada"}), 404
 
     try:
-        new_payment = Payment(
-            work_order_id=work_order_id,
-            amount=float(amount),
-            payment_method=payment_method,
-            status=status
+        new_payment = Pago(
+            orden_id=orden_id,
+            monto=float(monto),
+            metodo_pago=metodo_pago,
+            activo=True
         )
         db.session.add(new_payment)
         db.session.commit()
@@ -66,7 +66,8 @@ def get_payment_history():
         page = request.args.get('page', 1, type=int)
         per_page = request.args.get('per_page', 10, type=int)
         
-        pagination = Payment.query.order_by(Payment.created_at.desc()).paginate(
+        # Ordenar por fecha_pago desc
+        pagination = Pago.query.order_by(Pago.fecha_pago.desc()).paginate(
             page=page, per_page=per_page, error_out=False
         )
         
@@ -90,14 +91,14 @@ def get_revenue_summary():
     Genera un resumen de ingresos totales.
     """
     try:
-        # Sumar todos los pagos con status 'pagado'
-        total_revenue = db.session.query(func.sum(Payment.amount)).filter(Payment.status == 'pagado').scalar() or 0.0
+        # Sumar todos los pagos activos
+        total_revenue = db.session.query(func.sum(Pago.monto)).filter(Pago.activo == True).scalar() or 0.0
         
         # Desglose por método de pago
         revenue_by_method = db.session.query(
-            Payment.payment_method, 
-            func.sum(Payment.amount)
-        ).filter(Payment.status == 'pagado').group_by(Payment.payment_method).all()
+            Pago.metodo_pago, 
+            func.sum(Pago.monto)
+        ).filter(Pago.activo == True).group_by(Pago.metodo_pago).all()
         
         method_summary = {method: amount for method, amount in revenue_by_method}
 

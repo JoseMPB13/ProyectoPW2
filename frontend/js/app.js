@@ -8,6 +8,9 @@ import VehicleView from './views/VehicleView.js';
 import DashboardController from './controllers/DashboardController.js';
 import DashboardModel from './models/DashboardModel.js';
 import DashboardView from './views/DashboardView.js';
+import OrderController from './controllers/OrderController.js';
+import WorkerController from './controllers/WorkerController.js';
+import PaymentController from './controllers/PaymentController.js';
 
 /**
  * Controlador Principal de la Aplicación (App)
@@ -29,6 +32,9 @@ class App {
         this.dashboardView = new DashboardView();
         this.dashboardController = new DashboardController(this.dashboardModel, this.dashboardView);
 
+        this.orderController = new OrderController();
+        this.workerController = new WorkerController();
+        this.paymentController = new PaymentController();
         this.clientController = new ClientController();
         this.aiController = new AiController();
         this.init();
@@ -66,9 +72,8 @@ class App {
         console.log('Sesión válida. Cargando dashboard...');
         this.setupEventListeners();
         
-        // Cargar vista por defecto 'dashboard' o la que estuviera activa
-        // En este caso, queremos que 'vehicles' sea la principal si dashboard es la default
-        this.loadView('vehicles'); 
+        // Cargar vista por defecto 'dashboard' (Dashboard principal)
+        this.loadView('dashboard'); 
         
         // Actualizar info de usuario en header si existe
         const userStr = localStorage.getItem('user');
@@ -141,8 +146,12 @@ class App {
         
         // Actualizar título
         let title = 'Dashboard';
-        if (viewName === 'vehicles') title = 'Gestión de Vehículos';
+        if (viewName === 'dashboard') title = 'Dashboard';
+        else if (viewName === 'orders') title = 'Gestión de Órdenes';
+        else if (viewName === 'vehicles') title = 'Gestión de Vehículos';
         else if (viewName === 'clientes') title = 'Clientes';
+        else if (viewName === 'trabajadores') title = 'Trabajadores';
+        else if (viewName === 'pagos') title = 'Pagos';
         else title = viewName.charAt(0).toUpperCase() + viewName.slice(1);
         
         headerTitle.textContent = title;
@@ -155,11 +164,20 @@ class App {
             case 'dashboard':
                 this.dashboardController.init(); 
                 break;
+            case 'orders':
+                this.orderController.init();
+                break;
             case 'vehicles':
                 this.vehicleController.init();
                 break;
             case 'clientes':
                 this.clientController.init();
+                break;
+            case 'trabajadores':
+                this.workerController.init();
+                break;
+            case 'pagos':
+                this.paymentController.init();
                 break;
             default:
                 contentArea.innerHTML = `

@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify
 from app.services.report_service import ReportService
-from app.models import User
+from app.services.auth_service import AuthService
 from flask_jwt_extended import jwt_required, get_jwt_identity
 
 # ==============================================================================
@@ -25,10 +25,11 @@ def get_dashboard_metrics():
         JSON: Métricas mensuales.
     """
     current_user_id = get_jwt_identity()
-    user = User.query.get(current_user_id)
+    user = AuthService.get_user_by_id(current_user_id)
 
-    # Verificación de rol (Admin only) en controlador
-    if not user or user.role != 'admin':
+    # Verificación de rol (Admin only) 
+    # user.rol es la relación con el objeto Role (nombre_rol)
+    if not user or not user.rol or user.rol.nombre_rol != 'admin':
         return jsonify({"msg": "Acceso denegado. Se requieren permisos de administrador"}), 403
 
     try:

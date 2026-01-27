@@ -1,5 +1,5 @@
 from app import db
-from app.models import WorkOrder, OrderItem
+from app.models import Orden, EstadoOrden
 from sqlalchemy import func, extract
 from datetime import datetime
 
@@ -22,17 +22,18 @@ class ReportService:
         current_year = now.year
 
         # 1. Total de órdenes del mes actual
-        # Query: COUNT(id) WHERE created_at.month = current_month AND created_at.year = current_year
-        total_orders_month = db.session.query(func.count(WorkOrder.id))\
-            .filter(extract('month', WorkOrder.created_at) == current_month)\
-            .filter(extract('year', WorkOrder.created_at) == current_year)\
+        # Query: COUNT(id) WHERE fecha_ingreso.month = current_month AND fecha_ingreso.year = current_year
+        total_orders_month = db.session.query(func.count(Orden.id))\
+            .filter(extract('month', Orden.fecha_ingreso) == current_month)\
+            .filter(extract('year', Orden.fecha_ingreso) == current_year)\
             .scalar()
 
-        # 2. Ingreso estimado (Suma de items de órdenes finalizadas)
-        # Query: SUM(price_at_moment) FROM OrderItem JOIN WorkOrder WHERE status = 'finalizado'
-        estimated_income = db.session.query(func.sum(OrderItem.price_at_moment))\
-            .join(WorkOrder)\
-            .filter(WorkOrder.status == 'finalizado')\
+        # 2. Ingreso estimado (Suma de total_estimado de órdenes finalizadas/entregadas)
+        # Asumimos que el estado final es 'Entregado' o 'Finalizado'.
+        # Buscamos por nombre de estado.
+        estimated_income = db.session.query(func.sum(Orden.total_estimado))\
+            .join(EstadoOrden)\
+            .filter(EstadoOrden.nombre_estado.in_(['Finalizado', 'Entregado', 'Completado']))\
             .scalar()
         
         # Si no hay ventas, sum devuelve None, convertimos a 0.0
@@ -40,9 +41,10 @@ class ReportService:
             estimated_income = 0.0
 
         # 3. Conteo de órdenes por estado
-        # Query: SELECT status, COUNT(*) FROM WorkOrder GROUP BY status
-        orders_by_status_query = db.session.query(WorkOrder.status, func.count(WorkOrder.status))\
-            .group_by(WorkOrder.status)\
+        # Query: SELECT nombre_estado, COUNT(*) FROM Orden JOIN EstadoOrden GROUP BY nombre_estado
+        orders_by_status_query = db.session.query(EstadoOrden.nombre_estado, func.count(Orden.id))\
+            .join(Orden)\
+            .group_by(EstadoOrden.nombre_estado)\
             .all()
         
         # Transformamos la lista de tuplas [('pendiente', 5), ...] a diccionario {'pendiente': 5, ...}
