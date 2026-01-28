@@ -62,6 +62,9 @@ export default class ClientView {
         const pane = document.getElementById('clientDetailPane');
         const nombreCompleto = `${client.nombre} ${client.apellido_p} ${client.apellido_m || ''}`;
         
+        // Contar vehículos del array autos
+        const vehicleCount = (client.autos && Array.isArray(client.autos)) ? client.autos.length : 0;
+        
         pane.innerHTML = `
             <div class="detail-header">
                 <div class="client-avatar large">${(client.nombre || '').charAt(0)}</div>
@@ -74,7 +77,7 @@ export default class ClientView {
             <div class="tabs">
                 <div class="tabs-header">
                     <button class="tab-btn active" data-tab="info">Información</button>
-                    <button class="tab-btn" data-tab="vehicles">Vehículos (${client.vehicles_count || 0})</button>
+                    <button class="tab-btn" data-tab="vehicles">Vehículos (${vehicleCount})</button>
                     <button class="tab-btn" data-tab="history">Historial</button>
                 </div>
                 <div class="tabs-content">
@@ -93,8 +96,8 @@ export default class ClientView {
                                 <span>${client.direccion || '-'}</span>
                             </div>
                             <div class="info-item">
-                                <label>Última Visita:</label>
-                                <span>${client.last_visit || '-'}</span>
+                                <label>CI:</label>
+                                <span>${client.ci || '-'}</span>
                             </div>
                         </div>
                         <div class="mt-4">
@@ -102,7 +105,7 @@ export default class ClientView {
                         </div>
                     </div>
                     <div id="tab-vehicles" class="tab-pane">
-                        <p class="p-4 text-center text-secondary">Listado de vehículos aquí...</p>
+                        ${this._renderVehicles(client.autos)}
                     </div>
                     <div id="tab-history" class="tab-pane">
                         <p class="p-4 text-center text-secondary">Historial de órdenes aquí...</p>
@@ -113,6 +116,48 @@ export default class ClientView {
         
         this.bindTabEvents();
     }
+
+    /**
+     * Renderiza la lista de vehículos del cliente.
+     */
+    _renderVehicles(autos) {
+        if (!autos || !Array.isArray(autos) || autos.length === 0) {
+            return `
+                <div class="p-4 text-center">
+                    <p class="text-secondary mb-3">Este cliente no tiene vehículos registrados</p>
+                    <button class="btn-primary">+ Agregar Vehículo</button>
+                </div>
+            `;
+        }
+
+        return `
+            <div class="p-4">
+                <div class="mb-3">
+                    <button class="btn-primary">+ Agregar Vehículo</button>
+                </div>
+                <div class="vehicle-list">
+                    ${autos.map(auto => `
+                        <div class="vehicle-card">
+                            <div class="vehicle-icon">🚗</div>
+                            <div class="vehicle-info">
+                                <h4>${auto.marca} ${auto.modelo}</h4>
+                                <p class="text-secondary">
+                                    Placa: ${auto.placa} | 
+                                    Año: ${auto.anio || 'N/A'} | 
+                                    Color: ${auto.color || 'N/A'}
+                                </p>
+                            </div>
+                            <div class="vehicle-actions">
+                                <button class="btn-sm btn-secondary" title="Ver detalles">👁️</button>
+                                <button class="btn-sm btn-secondary" title="Editar">✏️</button>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    }
+
 
     bindListEvents() {
         const cards = document.querySelectorAll('.client-card');

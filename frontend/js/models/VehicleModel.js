@@ -11,25 +11,44 @@ export default class VehicleModel {
     }
 
     /**
-     * Obtiene todos los vehículos (extraídos de las órdenes por ahora).
+     * Obtiene todos los vehículos desde los clientes.
      * @returns {Promise<Array>} Lista de objetos con información de vehículo.
      */
     async getAll() {
         try {
-            // Consumimos /orders para obtener info de vehículos
-            const orders = await this.api.get('/orders');
+            // Obtener clientes con sus autos
+            const response = await this.api.get('/clients?per_page=1000');
             
-            // Si el backend fallara o devolviera null, devolvemos mock para pruebas visuales
-            if (!orders) return this._getMockData();
-
-            // Transformar/Normalizar datos si es necesario
-            // Asumimos que orders es un array de objetos con brand, model, plate, etc.
-            return orders;
+            // El backend devuelve {items: [], total, pages}
+            let clients = [];
+            if (response && response.items) {
+                clients = response.items;
+            } else if (Array.isArray(response)) {
+                clients = response;
+            }
+            
+            // Extraer todos los autos de todos los clientes
+            const vehicles = [];
+            clients.forEach(client => {
+                if (client.autos && Array.isArray(client.autos)) {
+                    client.autos.forEach(auto => {
+                        vehicles.push({
+                            ...auto,
+                            client_id: client.id,
+                            client_name: `${client.nombre} ${client.apellido_p}`,
+                            client_ci: client.ci
+                        });
+                    });
+                }
+            });
+            
+            return vehicles;
         } catch (error) {
-            console.warn('Error fetching orders/vehicles, using mock data for UI test.');
-            return this._getMockData();
+            console.error('Error fetching vehicles:', error);
+            return [];
         }
     }
+
 
     /**
      * Datos mockeados para pruebas visuales cuando no hay backend.

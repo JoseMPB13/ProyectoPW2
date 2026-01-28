@@ -54,6 +54,16 @@ export default class OrderModel {
     }
 
     /**
+     * Actualiza una orden completa.
+     * @param {number} orderId - ID de la orden.
+     * @param {Object} orderData - Datos a actualizar.
+     * @returns {Promise<Object>} Promesa con la orden actualizada.
+     */
+    async updateOrder(orderId, orderData) {
+        return this.api.put(`/orders/${orderId}`, orderData);
+    }
+
+    /**
      * Agrega un servicio a una orden.
      * @param {number} orderId - ID de la orden.
      * @param {number} servicioId - ID del servicio.

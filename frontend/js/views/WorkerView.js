@@ -226,6 +226,9 @@ export default class WorkerView {
 
     bindWorkerActions(handler) {
         this.contentArea.addEventListener('click', (e) => {
+            // Validar que estamos en la vista de trabajadores
+            if (!document.querySelector('.workers-container')) return;
+
             if (e.target.dataset.action) {
                 const action = e.target.dataset.action;
                 const id = e.target.dataset.id;

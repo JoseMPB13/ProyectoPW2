@@ -10,19 +10,39 @@ from app.models import Usuario
 orders_bp = Blueprint('orders', __name__)
 
 # ==============================================================================
-# Endpoint: Crear Orden de Trabajo
+# Endpoint: Crear Orden de Trabajo con Detalles
 # ==============================================================================
 @orders_bp.route('/orders', methods=['POST'])
 @jwt_required()
 def create_order():
     """
-    Crea una nueva orden de trabajo.
+    Crea una nueva orden de trabajo con servicios y repuestos en una sola transacción.
     
     Request Body:
         auto_id (int): ID del vehículo.
         tecnico_id (int): ID del técnico asignado.
         estado_id (int): ID del estado inicial.
         problema_reportado (str): Descripción del problema.
+        diagnostico (str, opcional): Diagnóstico técnico.
+        servicios (list, opcional): Array de objetos {servicio_id, precio_aplicado (opcional)}
+        repuestos (list, opcional): Array de objetos {repuesto_id, cantidad, precio_unitario_aplicado (opcional)}
+    
+    Ejemplo:
+    {
+        "auto_id": 1,
+        "tecnico_id": 2,
+        "estado_id": 1,
+        "problema_reportado": "Motor hace ruido extraño",
+        "diagnostico": "Posible falla en correa de distribución",
+        "servicios": [
+            {"servicio_id": 1},
+            {"servicio_id": 3, "precio_aplicado": 150.00}
+        ],
+        "repuestos": [
+            {"repuesto_id": 5, "cantidad": 2},
+            {"repuesto_id": 8, "cantidad": 1, "precio_unitario_aplicado": 85.50}
+        ]
+    }
     """
     data = request.get_json()
 
@@ -32,15 +52,13 @@ def create_order():
         return jsonify({"msg": "Faltan datos obligatorios (auto_id, tecnico_id, estado_id)"}), 400
     
     try:
-        new_order = OrderService.create_order(
-            auto_id=data['auto_id'],
-            tecnico_id=data['tecnico_id'],
-            estado_id=data['estado_id'],
-            problema_reportado=data.get('problema_reportado', '')
-        )
-        return jsonify({"msg": "Orden creada exitosamente", "order": new_order.to_dict()}), 201
+        new_order = OrderService.create_order_with_details(data)
+        return jsonify({
+            "msg": "Orden creada exitosamente",
+            "order": new_order.to_dict()
+        }), 201
     except ValueError as e:
-        return jsonify({"msg": str(e)}), 404
+        return jsonify({"msg": str(e)}), 400
     except Exception as e:
         return jsonify({"msg": f"Error al crear orden: {str(e)}"}), 500
 
@@ -94,13 +112,66 @@ def get_order(order_id):
     return jsonify(order.to_dict()), 200
 
 # ==============================================================================
-# Endpoint: Actualizar Estado de Orden
+# Endpoint: Actualizar Orden Completa con Sincronización de Detalles
+# ==============================================================================
+@orders_bp.route('/orders/<int:order_id>', methods=['PUT'])
+@jwt_required()
+def update_order(order_id):
+    """
+    Actualiza una orden existente con sincronización completa de servicios y repuestos.
+    
+    Request Body:
+        tecnico_id (int, opcional): Nuevo técnico asignado
+        estado_id (int, opcional): Nuevo estado
+        problema_reportado (str, opcional): Actualización del problema
+        diagnostico (str, opcional): Actualización del diagnóstico
+        servicios (list, opcional): Lista COMPLETA de servicios que debe tener la orden
+        repuestos (list, opcional): Lista COMPLETA de repuestos que debe tener la orden
+    
+    Estrategia de Sincronización:
+    - Si un servicio/repuesto no viene en la lista: Se elimina de la BD
+    - Si viene uno nuevo: Se inserta (y se descuenta stock para repuestos)
+    - Si cambia la cantidad de un repuesto: Se ajusta el stock por la diferencia
+    
+    Ejemplo:
+    {
+        "tecnico_id": 3,
+        "estado_id": 2,
+        "diagnostico": "Diagnóstico actualizado",
+        "servicios": [
+            {"servicio_id": 1},
+            {"servicio_id": 5, "precio_aplicado": 200.00}
+        ],
+        "repuestos": [
+            {"repuesto_id": 5, "cantidad": 3},
+            {"repuesto_id": 10, "cantidad": 1}
+        ]
+    }
+    """
+    data = request.get_json()
+    
+    if not data:
+        return jsonify({"msg": "No se proporcionaron datos para actualizar"}), 400
+    
+    try:
+        updated_order = OrderService.update_order_with_details(order_id, data)
+        return jsonify({
+            "msg": "Orden actualizada exitosamente",
+            "order": updated_order.to_dict()
+        }), 200
+    except ValueError as e:
+        return jsonify({"msg": str(e)}), 400
+    except Exception as e:
+        return jsonify({"msg": f"Error al actualizar orden: {str(e)}"}), 500
+
+# ==============================================================================
+# Endpoint: Actualizar Estado de Orden (Método Rápido)
 # ==============================================================================
 @orders_bp.route('/orders/<int:order_id>/status', methods=['PUT'])
 @jwt_required()
 def update_order_status(order_id):
     """
-    Actualiza el estado de la orden.
+    Actualiza únicamente el estado de la orden (método rápido sin afectar detalles).
     Body: status_id (int) - alias de estado_id para compatibilidad con frontend si es necesario, pero usaremos estado_id preferiblemente.
     """
     data = request.get_json()
@@ -119,14 +190,19 @@ def update_order_status(order_id):
         return jsonify({"msg": f"Error al actualizar estado: {str(e)}"}), 500
 
 # ==============================================================================
-# Endpoint: Agregar Servicio a Orden
+# Endpoints LEGACY: Agregar Servicio/Repuesto Individual
+# (Se mantienen para compatibilidad con código existente del frontend)
 # ==============================================================================
+
 @orders_bp.route('/orders/<int:order_id>/services', methods=['POST'])
 @jwt_required()
 def add_service_to_order(order_id):
     """
     Agrega un servicio a una orden existente.
     Body: servicio_id (int)
+    
+    NOTA: Este es un método legacy. Se recomienda usar PUT /orders/<id> 
+    con la lista completa de servicios para mejor control.
     """
     data = request.get_json()
     if not data or not data.get('servicio_id'):
@@ -146,15 +222,15 @@ def add_service_to_order(order_id):
     except Exception as e:
         return jsonify({"msg": f"Error al agregar servicio: {str(e)}"}), 500
 
-# ==============================================================================
-# Endpoint: Agregar Repuesto a Orden
-# ==============================================================================
 @orders_bp.route('/orders/<int:order_id>/parts', methods=['POST'])
 @jwt_required()
 def add_part_to_order(order_id):
     """
     Agrega un repuesto a una orden existente.
     Body: repuesto_id (int), cantidad (int, default 1)
+    
+    NOTA: Este es un método legacy. Se recomienda usar PUT /orders/<id> 
+    con la lista completa de repuestos para mejor control.
     """
     data = request.get_json()
     if not data or not data.get('repuesto_id'):

@@ -99,8 +99,10 @@ class Cliente(db.Model):
             'celular': self.celular,
             'direccion': self.direccion,
             'activo': self.activo,
-            'creado_at': self.creado_at.isoformat() if self.creado_at else None
+            'creado_at': self.creado_at.isoformat() if self.creado_at else None,
+            'autos': [auto.to_dict() for auto in self.autos] if self.autos else []
         }
+
 
 # ==============================================================================
 # 3. ACTIVOS E INVENTARIO
@@ -201,12 +203,17 @@ class Orden(db.Model):
             'id': self.id,
             'auto_id': self.auto_id,
             'placa': self.auto.placa if self.auto else None,
+            'marca': self.auto.marca if self.auto else None,
+            'modelo': self.auto.modelo if self.auto else None,
+            'cliente_nombre': f"{self.auto.cliente.nombre} {self.auto.cliente.apellido_p}" if self.auto and self.auto.cliente else 'Sin cliente',
             'tecnico_id': self.tecnico_id,
             'tecnico_nombre': f"{self.tecnico.nombre} {self.tecnico.apellido_p}" if self.tecnico else None,
             'estado_id': self.estado_id,
             'estado_nombre': self.estado.nombre_estado if self.estado else None,
             'fecha_ingreso': self.fecha_ingreso.isoformat() if self.fecha_ingreso else None,
             'fecha_entrega': self.fecha_entrega.isoformat() if self.fecha_entrega else None,
+            'fecha_estimada_salida': self.fecha_entrega.isoformat() if self.fecha_entrega else None, # Alias for consistency
+            'fecha_salida': self.fecha_entrega.isoformat() if self.fecha_entrega else None, # Alias for consistency
             'problema_reportado': self.problema_reportado,
             'diagnostico': self.diagnostico,
             'total_estimado': self.total_estimado,
@@ -279,3 +286,22 @@ class OrdenDetalleRepuesto(db.Model):
             'cantidad': self.cantidad,
             'precio_unitario_aplicado': self.precio_unitario_aplicado
         }
+
+# ==============================================================================
+# 5. PAGOS
+# ==============================================================================
+
+# NOTA: Modelo Pago comentado porque causa conflictos al iniciar el servidor
+# Los pagos se manejan con SQL directo en el endpoint
+
+# class Pago(db.Model):
+#     __tablename__ = 'pagos'
+#     id = db.Column(db.Integer, primary_key=True)
+#     orden_id = db.Column(db.Integer, db.ForeignKey('ordenes.id'), nullable=False)
+#     monto = db.Column(db.Float, nullable=False)
+#     metodo_pago = db.Column(db.String(50), nullable=False)
+#     fecha_pago = db.Column(db.DateTime, default=datetime.utcnow)
+#     activo = db.Column(db.Boolean, default=True)
+
+
+

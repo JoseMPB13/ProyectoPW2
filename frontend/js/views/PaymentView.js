@@ -176,7 +176,10 @@ export default class PaymentView {
      */
     bindNewPayment(handler) {
         this.contentArea.addEventListener('click', (e) => {
-            if (e.target.id === 'newPaymentBtn') {
+            if (!this.contentArea.querySelector('.payments-container')) return;
+            
+            const btn = e.target.closest('#newPaymentBtn');
+            if (btn) {
                 handler();
             }
         });
@@ -207,9 +210,12 @@ export default class PaymentView {
 
     bindPaymentActions(handler) {
         this.contentArea.addEventListener('click', (e) => {
-            if (e.target.dataset.action) {
-                const action = e.target.dataset.action;
-                const id = e.target.dataset.id;
+            if (!this.contentArea.querySelector('.payments-container')) return;
+
+            const btn = e.target.closest('[data-action]');
+            if (btn) {
+                const action = btn.dataset.action;
+                const id = btn.dataset.id;
                 handler(action, id);
             }
         });
@@ -217,7 +223,10 @@ export default class PaymentView {
 
     bindApplyFilters(handler) {
         this.contentArea.addEventListener('click', (e) => {
-            if (e.target.id === 'applyFilters') {
+            if (!this.contentArea.querySelector('.payments-container')) return;
+            
+            const btn = e.target.closest('#applyFilters');
+            if (btn) {
                 const fechaInicio = document.getElementById('filterFechaInicio').value;
                 const fechaFin = document.getElementById('filterFechaFin').value;
                 handler({ fecha_inicio: fechaInicio, fecha_fin: fechaFin });

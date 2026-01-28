@@ -15,18 +15,39 @@ export default class PaymentModel {
      * @returns {Promise<Array>} Promesa con la lista de pagos.
      */
     async getPayments(filters = {}) {
-        let endpoint = '/payments';
-        const params = new URLSearchParams();
-        
-        if (filters.orden_id) params.append('orden_id', filters.orden_id);
-        if (filters.fecha_inicio) params.append('fecha_inicio', filters.fecha_inicio);
-        if (filters.fecha_fin) params.append('fecha_fin', filters.fecha_fin);
-        
-        const queryString = params.toString();
-        if (queryString) endpoint += `?${queryString}`;
-        
-        return this.api.get(endpoint);
+        try {
+            let endpoint = '/payments/history';
+            const params = new URLSearchParams();
+            
+            // Agregar paginación para obtener todos los registros
+            params.append('per_page', '1000');
+            
+            if (filters.orden_id) params.append('orden_id', filters.orden_id);
+            if (filters.fecha_inicio) params.append('fecha_inicio', filters.fecha_inicio);
+            if (filters.fecha_fin) params.append('fecha_fin', filters.fecha_fin);
+            
+            const queryString = params.toString();
+            if (queryString) endpoint += `?${queryString}`;
+            
+            const response = await this.api.get(endpoint);
+            
+            // El backend devuelve {items: [], total, pages, current_page}
+            if (response && response.items) {
+                return response.items;
+            }
+            
+            // Si la respuesta es un array directo (por compatibilidad)
+            if (Array.isArray(response)) {
+                return response;
+            }
+            
+            return [];
+        } catch (error) {
+            console.error('Error fetching payments:', error);
+            return [];
+        }
     }
+
 
     /**
      * Obtiene un pago específico por ID.

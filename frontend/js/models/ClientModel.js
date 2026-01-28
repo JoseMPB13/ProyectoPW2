@@ -13,14 +13,26 @@ export default class ClientModel {
      */
     async getAll() {
         try {
-            const clients = await this.api.get('/clients');
-            if (!clients) return this._getMockData();
-            return clients;
+            const response = await this.api.get('/clients?per_page=1000');
+            
+            // El backend devuelve {items: [], total, pages, current_page}
+            if (response && response.items) {
+                return response.items;
+            }
+            
+            // Si la respuesta es un array directo (por compatibilidad)
+            if (Array.isArray(response)) {
+                return response;
+            }
+            
+            // Si no hay datos, retornar array vacío
+            return [];
         } catch (error) {
-            console.warn('Error fetching clients, using mock data.');
-            return this._getMockData();
+            console.error('Error fetching clients:', error);
+            return [];
         }
     }
+
 
     /**
      * Obtiene un cliente por ID (simulado filtrando mock o fetch real).
