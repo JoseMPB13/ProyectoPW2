@@ -175,7 +175,11 @@ class App {
         
         headerTitle.textContent = title;
 
-        // Limpiar contenido previo para evitar conflictos de eventos
+        headerTitle.textContent = title;
+
+        // Limpiar contenido previo y estado global
+        this.cleanup();
+        
         contentArea.innerHTML = '<p class="text-center p-4">Cargando...</p>';
 
         // Enrutamiento
@@ -211,6 +215,34 @@ class App {
                         <p>Esta sección está en construcción.</p>
                     </div>`;
         }
+    }
+
+    /**
+     * Limpia el DOM antes de cambiar de vista.
+     * Elimina modales, backdrops y limpia el área de contenido.
+     */
+    cleanup() {
+        console.log('App: Cleaning up DOM...');
+        
+        // 1. Eliminar modales (overlay con clase .modal-overlay)
+        const modals = document.querySelectorAll('.modal-overlay');
+        modals.forEach(m => m.remove());
+
+        // 2. Eliminar backdrops residuales (si hubiera bootstrap u otros)
+        const backdrops = document.querySelectorAll('.modal-backdrop');
+        backdrops.forEach(b => b.remove());
+
+        // 3. Limpiar área de contenido principal
+        const contentArea = document.getElementById('contentArea');
+        if (contentArea) {
+            contentArea.innerHTML = '';
+        }
+
+        // 4. Cerrar chat de IA si está abierto (opcional, por limpieza visual)
+        // const aiWindow = document.querySelector('.ai-chat-window');
+        // if (aiWindow && !aiWindow.classList.contains('hidden')) {
+        //    aiWindow.classList.add('hidden');
+        // }
     }
 }
 

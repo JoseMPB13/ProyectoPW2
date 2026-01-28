@@ -1,0 +1,194 @@
+// ACTUALIZACIÓN COMPLETA PARA OrderController.js
+// Integración de lógica de pagos con actualización en tiempo real
+
+// ============================================================================
+// PASO 1: AGREGAR IMPORT EN LA PARTE SUPERIOR (después de línea 6)
+// ============================================================================
+
+import PaymentView from '../views/PaymentView.js';
+
+// ============================================================================
+// PASO 2: ACTUALIZAR EL CONSTRUCTOR (líneas 13-37)
+// ============================================================================
+// AGREGAR estas línea después de: this.view = new OrderView();
+
+    this.paymentView = new PaymentView();
+
+// ============================================================================
+// PASO 3: ACTUALIZAR handleAction() - REEMPLAZAR MÉTODO COMPLETO (líneas 76-95)
+// ============================================================================
+
+/**
+ * Maneja las acciones de los botones.
+ */
+async handleAction(action, id) {
+    console.log("OrderController: Action received", action, id);
+    switch (action) {
+        case "view":
+            await this.viewOrder(id);
+            break;
+        case "edit":
+            await this.editOrder(id);
+            break;
+        case "payment":
+            await this.handlePaymentAction(id);
+            break;
+        default:
+            console.warn("Acción desconocida:", action);
+    }
+}
+
+// ============================================================================
+// PASO 4: AGREGAR LOS NUEVOS MÉTODOS DESPUÉS DE handleAction()
+// ============================================================================
+
+/**
+ * Maneja la acción de cobro para una orden.
+ */
+async handlePaymentAction(orderId) {
+    try {
+        this.view.showLoading();
+        
+        // Obtener datos completos de la orden
+        const response = await this.model.fetchOrders();
+        const order = response.items.find(o => o.id === parseInt(orderId));
+        
+        if (!order) {
+            throw new Error('Orden no encontrada');
+        }
+        
+        this.view.hideLoading();
+        
+        // Verificar que la orden esté finalizada
+        const isFinished = order.estado_nombre === 'Finalizado' || order.estado_nombre === 'Entregado';
+        if (!isFinished) {
+            Toast.show(
+                `La orden debe estar en estado "Finalizado" o "Entregado" para poder cobrarla. Estado actual: ${order.estado_nombre}`,
+                'warning',
+                4000
+            );
+            return;
+        }
+        
+        // Verificar que haya saldo pendiente
+        const hasPendingBalance = !order.pagado_completamente && (order.saldo_pendiente || order.total_estimado) > 0;
+        if (!hasPendingBalance) {
+            Toast.show('Esta orden ya está pagada completamente', 'info');
+            return;
+        }
+        
+        // Mostrar modal de pago
+        this.paymentView.showPaymentModal(order);
+        
+        // Vincular el evento de submit del pago
+        this.paymentView.bindSubmitPayment(async (paymentData) => {
+            await this.processPayment(paymentData);
+        });
+        
+    } catch (error) {
+        this.view.hideLoading();
+        console.error('Error al cargar orden para pago:', error);
+        Toast.show('Error al cargar la orden. Por favor intenta de nuevo.', 'error');
+    }
+}
+
+/**
+ * Procesa un pago y actualiza la vista en tiempo real.
+ */
+async processPayment(paymentData) {
+    try {
+        this.view.showLoading();
+        
+        // Llamar a la API del backend
+        const API_BASE = 'http://localhost:5000';
+        const token = localStorage.getItem('token');
+        
+        const response = await fetch(`${API_BASE}/payments/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(paymentData)
+        });
+        
+        const result = await response.json();
+        
+        if (!response.ok) {
+            // Manejar errores específicos del backend
+            let errorMessage = result.msg || 'Error al procesar el pago';
+            
+            if (result.msg && result.msg.includes('no ha sido finalizada')) {
+                errorMessage = `No se puede cobrar: La orden debe estar finalizada.\nEstado actual: ${result.estado_actual || 'Desconocido'}`;
+            } else if (result.msg && result.msg.includes('excede el saldo')) {
+                errorMessage = `El monto (Bs. ${paymentData.monto}) excede el saldo pendiente.\nSaldo disponible: Bs. ${result.saldo_pendiente || 0}`;
+            }
+            
+            this.view.hideLoading();
+            Toast.show(errorMessage, 'error', 5000);
+            throw new Error(errorMessage);
+        }
+        
+        console.log('Pago registrado exitosamente:', result);
+        
+        // Mostrar información del balance actualizado
+        if (result.balance) {
+            const balance = result.balance;
+            const isPaidFull = balance.pagado_completamente;
+            
+            let successMessage = `Pago de Bs. ${paymentData.monto} registrado exitosamente`;
+            if (isPaidFull) {
+                successMessage += ' - Orden pagada completamente ✅';
+            } else {
+                successMessage += ` - Saldo pendiente: Bs. ${balance.saldo_pendiente.toFixed(2)}`;
+            }
+            
+            Toast.show(successMessage, 'success', 4000);
+        } else {
+            Toast.show(`Pago de Bs. ${paymentData.monto} registrado exitosamente`, 'success');
+        }
+        
+        // ⭐ ACTUALIZACIÓN EN TIEMPO REAL ⭐
+        // Recargar las órdenes para mostrar el estado de pago actualizado
+        await this.loadOrders(this.currentPage, this.currentFilters);
+        
+        this.view.hideLoading();
+        
+        return result;
+        
+    } catch (error) {
+        this.view.hideLoading();
+        console.error('Error al procesar pago:', error);
+        
+        // Solo mostrar toast si no se ha mostrado ya
+        if (!error.message.includes('excede') && !error.message.includes('finalizada')) {
+            if (error.message.includes('fetch') || error.message.includes('Network')) {
+                Toast.show('Error de conexión. Verifica que el backend esté corriendo.', 'error');
+            } else {
+                Toast.show('Error al procesar el pago: ' + error.message, 'error');
+            }
+        }
+        
+        throw error;
+    }
+}
+
+// ============================================================================
+// NOTAS IMPORTANTES:
+// ============================================================================
+// 
+// 1. La variable this.currentPage debe existir. Si no existe, agregar en constructor:
+//    this.currentPage = 1;
+//    this.currentFilters = {};
+//
+// 2. El método showLoading() y hideLoading() deben existir en OrderView.
+//    Si no existen, ya están implementados en el archivo actual.
+//
+// 3. Toast debe estar importado en la parte superior del archivo.
+//    Ya debería estar: import Toast from '../utils/toast.js';
+//
+// 4. Después de un pago exitoso, la tabla de órdenes se recarga automáticamente
+//    mostrando el botón actualizado ("Pagado" si está completo, o "Cobrar" con
+//    el nuevo saldo pendiente).
+//
+// ============================================================================

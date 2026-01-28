@@ -40,23 +40,23 @@ export default class ClientView {
         `;
 
         this.bindListEvents();
-        this.bindSearchEvent();
+        this.bindListEvents();
+        // this.bindSearchEvent(); // Removed internal binding calls from render if they are to be called by controller, 
+        // but wait, render calls it internally. I should probably leave the call in render but rename it or separate it.
+        // Actually, the controller `init` calls `bindSearch` usually.
+        // Let's look at `ClientController.init`. It calls `view.bind...` methods.
+        // But `ClientView.render` was calling `bindSearchEvent` internally.
+        // I will REMOVE `this.bindSearchEvent()` from `render` and let Controller call `bindSearch`.
+
         
         document.getElementById('newClientBtn').addEventListener('click', () => this.showCreateModal());
     }
 
-    bindSearchEvent() {
+    bindSearch(handler) {
         const searchInput = document.getElementById('clientSearchInput');
         if (searchInput) {
             searchInput.addEventListener('input', (e) => {
-                const term = e.target.value.toLowerCase();
-                const filtered = this.allClients.filter(c => 
-                    (c.nombre && c.nombre.toLowerCase().includes(term)) || 
-                    (c.apellido_p && c.apellido_p.toLowerCase().includes(term)) ||
-                    (c.ci && c.ci.toLowerCase().includes(term))
-                );
-                document.getElementById('clientList').innerHTML = this._generateList(filtered);
-                this.bindListEvents(); // Re-bind click on new items
+                handler(e.target.value);
             });
         }
     }
@@ -136,6 +136,11 @@ export default class ClientView {
 
     bindCreateClient(handler) {
         this.onCreateClient = handler;
+    }
+
+    updateClientList(clients) {
+        document.getElementById('clientList').innerHTML = this._generateList(clients);
+        this.bindListEvents();
     }
 
     _generateList(clients) {

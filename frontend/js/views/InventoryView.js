@@ -3,6 +3,25 @@ export default class InventoryView {
         this.contentArea = document.getElementById('contentArea');
         this.onAction = null;
         this.onSubmit = null;
+        this.modal = null; 
+    }
+
+    showLoading() {
+        let overlay = document.querySelector('.loading-overlay');
+        if (!overlay) {
+            overlay = document.createElement('div');
+            overlay.className = 'loading-overlay';
+            overlay.innerHTML = '<div class="spinner"></div>';
+            document.body.appendChild(overlay);
+        }
+        overlay.style.display = 'flex';
+        document.querySelectorAll('button').forEach(btn => btn.disabled = true);
+    }
+
+    hideLoading() {
+        const overlay = document.querySelector('.loading-overlay');
+        if (overlay) overlay.style.display = 'none';
+        document.querySelectorAll('button').forEach(btn => btn.disabled = false);
     }
 
     render(parts = []) {
@@ -12,9 +31,14 @@ export default class InventoryView {
                     <h2>Inventario de Repuestos</h2>
                     <p class="text-secondary">Gestión de stock y precios de repuestos</p>
                 </div>
-                <button id="btnNewPart" class="btn-primary">
-                    <span>+</span> Nuevo Repuesto
-                </button>
+                <div class="header-actions" style="display: flex; gap: 10px;">
+                    <div class="search-box">
+                        <input type="text" id="inventorySearch" placeholder="🔍 Buscar repuesto..." class="search-input">
+                    </div>
+                    <button id="btnNewPart" class="btn-primary">
+                        <span>+</span> Nuevo Repuesto
+                    </button>
+                </div>
             </div>
 
             <div class="inventory-container" style="margin-top: 20px;">
@@ -89,6 +113,24 @@ export default class InventoryView {
                 if (this.onAction) this.onAction(action, id);
             });
         });
+
+        const searchInput = document.getElementById('inventorySearch');
+        if (searchInput) {
+            searchInput.addEventListener('input', (e) => {
+                if (this.onSearch) this.onSearch(e.target.value);
+            });
+        }
+    }
+
+    bindSearch(handler) {
+        this.onSearch = handler;
+    }
+
+    updatePartsList(parts) {
+        const tableBody = this.contentArea.querySelector('.data-table tbody');
+        if (tableBody) {
+            tableBody.innerHTML = parts.map(part => this.renderRow(part)).join('');
+        }
     }
 
     showModal(part = null) {

@@ -198,6 +198,18 @@ class Orden(db.Model):
     detalles_repuestos = db.relationship('OrdenDetalleRepuesto', backref='orden', lazy=True)
     pagos = db.relationship('Pago', backref='orden', lazy=True)
 
+    def calcular_total_pagado(self):
+        """Calcula el total de pagos activos para esta orden."""
+        return sum(pago.monto for pago in self.pagos if pago.activo)
+    
+    def calcular_saldo_pendiente(self):
+        """Calcula el saldo pendiente (total_estimado - total_pagado)."""
+        return self.total_estimado - self.calcular_total_pagado()
+    
+    def esta_pagado_completamente(self):
+        """Verifica si la orden está completamente pagada."""
+        return self.calcular_saldo_pendiente() <= 0.01  # Tolerancia para decimales
+
     def to_dict(self):
         return {
             'id': self.id,
@@ -220,7 +232,10 @@ class Orden(db.Model):
             'activo': self.activo,
             'detalles_servicios': [d.to_dict() for d in self.detalles_servicios],
             'detalles_repuestos': [d.to_dict() for d in self.detalles_repuestos],
-            'pagos': [p.to_dict() for p in self.pagos]
+            'pagos': [p.to_dict() for p in self.pagos],
+            'total_pagado': self.calcular_total_pagado(),
+            'saldo_pendiente': self.calcular_saldo_pendiente(),
+            'pagado_completamente': self.esta_pagado_completamente()
         }
 
 class Pago(db.Model):
@@ -230,7 +245,9 @@ class Pago(db.Model):
     orden_id = db.Column(db.Integer, db.ForeignKey('ordenes.id'))
     monto = db.Column(db.Float, nullable=False)
     fecha_pago = db.Column(db.DateTime, default=datetime.utcnow)
-    metodo_pago = db.Column(db.String(50)) # Efectivo, QR, Transferencia
+    metodo_pago = db.Column(db.String(50)) # Efectivo, QR, Transferencia, Tarjeta
+    referencia = db.Column(db.String(100)) # Referencia de pago externo (opcional)
+    usuario_id = db.Column(db.Integer, db.ForeignKey('usuarios.id'), nullable=True)
     activo = db.Column(db.Boolean, default=True)
 
     def to_dict(self):
@@ -240,6 +257,8 @@ class Pago(db.Model):
             'monto': self.monto,
             'fecha_pago': self.fecha_pago.isoformat() if self.fecha_pago else None,
             'metodo_pago': self.metodo_pago,
+            'referencia': self.referencia,
+            'usuario_id': self.usuario_id,
             'activo': self.activo
         }
 

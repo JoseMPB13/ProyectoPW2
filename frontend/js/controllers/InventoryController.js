@@ -1,3 +1,7 @@
+import API from '../utils/api.js';
+import InventoryView from '../views/InventoryView.js';
+import Toast from '../utils/toast.js';
+
 export default class InventoryController {
     constructor(model, view) {
         this.model = model;
@@ -14,15 +18,34 @@ export default class InventoryController {
     bindEvents() {
         this.view.onAction = (action, id) => this.handleAction(action, id);
         this.view.onSubmit = (data) => this.handleSubmit(data);
+        this.view.bindSearch((query) => this.handleSearch(query));
+    }
+
+    handleSearch(query) {
+        const term = query.toLowerCase().trim();
+        if (!term) {
+            this.view.updatePartsList(this.parts);
+            return;
+        }
+
+        const filtered = this.parts.filter(p => 
+            (p.nombre && p.nombre.toLowerCase().includes(term)) ||
+            (p.marca && p.marca.toLowerCase().includes(term)) ||
+            (p.id && p.id.toString().includes(term))
+        );
+        this.view.updatePartsList(filtered);
     }
 
     async loadParts() {
         try {
+            this.view.showLoading();
             this.parts = await this.model.getParts();
             this.view.render(this.parts);
         } catch (error) {
-            console.error(error);
-            this.view.showError('Error al cargar inventario');
+            console.error('Error cargando inventario:', error);
+            Toast.error('Error al cargar inventario');
+        } finally {
+            this.view.hideLoading();
         }
     }
 
@@ -35,29 +58,37 @@ export default class InventoryController {
         } else if (action === 'delete') {
             this.view.showConfirmDelete(id, async (idToDelete) => {
                 try {
+                    this.view.showLoading();
                     await this.model.deletePart(idToDelete);
-                    this.view.showSuccess('Repuesto eliminado');
+                    Toast.success('Repuesto eliminado correctamente');
                     this.loadParts();
                 } catch (error) {
-                    console.error(error);
-                    this.view.showError('Error al eliminar repuesto');
+                    console.error('Error eliminando repuesto:', error);
+                    Toast.error('Error al eliminar repuesto');
+                } finally {
+                    this.view.hideLoading();
                 }
             });
         }
     }
 
-    async handleSubmit(data) {
+    async handleSubmit(partData) {
         try {
-            if (data.id) {
-                await this.model.updatePart(data.id, data);
+            this.view.showLoading();
+            if (partData.id) {
+                await this.model.updatePart(partData.id, partData);
+                Toast.success('Repuesto actualizado correctamente');
             } else {
-                await this.model.createPart(data);
+                await this.model.createPart(partData);
+                Toast.success('Repuesto creado correctamente');
             }
-            this.view.showSuccess('Operación exitosa');
+            this.view.closeModal();
             this.loadParts();
         } catch (error) {
-            console.error(error);
-            this.view.showError(error.message);
+            console.error('Error guardando repuesto:', error);
+            Toast.error('Error al guardar repuesto');
+        } finally {
+            this.view.hideLoading();
         }
     }
 }

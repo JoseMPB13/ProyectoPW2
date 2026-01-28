@@ -1,0 +1,212 @@
+// ============================================================================
+// INSTRUCCIONES PARA AGREGAR BOTÓN "COBRAR" EN MODAL DE DETALLES
+// Archivo: OrderView.js
+// ============================================================================
+
+// PASO 1: Buscar el método showOrderDetails (línea 343)
+// PASO 2: Encontrar la sección de "Resumen de Costos" (aprox. línea 440-459)
+// PASO 3: DESPUÉS de la sección de totales y ANTES del cierre del modal-body,
+//         agregar esta nueva sección de PAGOS:
+
+// Agregar DESPUÉS de la línea que dice:
+//    </div>  <!-- cierre de totals-section -->
+// y ANTES de:
+//    </div>  <!-- cierre de modal-body -->
+
+// CÓDIGO A AGREGAR:
+
+                  <!-- Información de Pagos -->
+                  <div class="detail-section payment-info-section">
+                      <h4>Estado de Pago</h4>
+                      <div class="payment-status-grid">
+                          <div class="payment-stat">
+                              <label>Total a Pagar:</label>
+                              <span class="amount">Bs. ${this.formatCurrency(order.total_estimado || 0)}</span>
+                          </div>
+                          <div class="payment-stat">
+                              <label>Total Pagado:</label>
+                              <span class="amount paid">Bs. ${this.formatCurrency(order.total_pagado || 0)}</span>
+                          </div>
+                          <div class="payment-stat">
+                              <label>Saldo Pendiente:</label>
+                              <span class="amount pending ${(order.saldo_pendiente || 0) > 0 ? 'text-danger' : 'text-success'}">
+                                  Bs. ${this.formatCurrency(order.saldo_pendiente || 0)}
+                              </span>
+                          </div>
+                          <div class="payment-stat">
+                              <label>Estado:</label>
+                              <span class="badge ${order.pagado_completamente ? 'badge-success' : 'badge-warning'}">
+                                  ${order.pagado_completamente ? '✓ Pagado Completo' : '⏳ Pago Pendiente'}
+                              </span>
+                          </div>
+                      </div>
+                      
+                      ${this.renderPaymentButton(order)}
+                      
+                      ${order.pagos && order.pagos.length > 0 ? `
+                          <div class="payments-history mt-3">
+                              <h5>Historial de Pagos</h5>
+                              <table class="table table-sm">
+                                  <thead>
+                                      <tr>
+                                          <th>Fecha</th>
+                                          <th>Método</th>
+                                          <th>Monto</th>
+                                          <th>Referencia</th>
+                                      </tr>
+                                  </thead>
+                                  <tbody>
+                                      ${order.pagos.map(p => `
+                                          <tr>
+                                              <td>${this.formatDate(p.fecha_pago)}</td>
+                                              <td><span class="badge badge-info">${p.metodo_pago}</span></td>
+                                              <td class="text-success font-weight-bold">Bs. ${this.formatCurrency(p.monto)}</td>
+                                              <td><small>${p.referencia || '-'}</small></td>
+                                          </tr>
+                                      `).join('')}
+                                  </tbody>
+                              </table>
+                          </div>
+                      ` : ''}
+                  </div>
+
+// ============================================================================
+// PASO 4: Agregar event listener para el botón de pago en el modal de detalles
+// ============================================================================
+
+// Buscar el final del método showOrderDetails, donde se agregan los event listeners
+// (aproximadamente línea 455-465, donde dice modal.querySelector('.modal-close'))
+
+// DESPUÉS de:
+//   modal.querySelector(".modal-close").addEventListener("click", () => {
+//       document.body.removeChild(modal);
+//   });
+
+// AGREGAR:
+
+    // Event listener para el botón de cobro en el modal de detalles
+    const paymentBtn = modal.querySelector('[data-action="payment"]');
+    if (paymentBtn && !paymentBtn.disabled) {
+        paymentBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            const orderId = paymentBtn.getAttribute('data-id');
+            if (this.onPaymentAction) {
+                // Cerrar modal de detalles primero
+                document.body.removeChild(modal);
+                // Disparar acción de pago
+                this.onPaymentAction(orderId);
+            }
+        });
+    }
+
+// ============================================================================
+// PASO 5: Asegurarse de que el método renderPaymentButton esté definido
+// ============================================================================
+// Este método ya debería estar definido según las instrucciones anteriores
+// (INSTRUCTIONS_OrderView.txt). Si no está, agregarlo después del método formatCurrency
+
+// ============================================================================
+// PASO 6: AGREGAR CSS para los estilos de la sección de pagos
+// Archivo: frontend/css/styles.css
+// ============================================================================
+
+/* Sección de información de pagos en modal de detalles */
+.payment-info-section {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-radius: 10px;
+    padding: 20px;
+    margin-top: 20px;
+}
+
+.payment-info-section h4 {
+    color: #2c3e50;
+    margin-bottom: 15px;
+    font-size: 1.2rem;
+}
+
+.payment-status-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.payment-stat {
+    background: white;
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    border-left: 4px solid #007bff;
+}
+
+.payment-stat label {
+    display: block;
+    color: #6c757d;
+    font-size: 0.85rem;
+    margin-bottom: 5px;
+    font-weight: 600;
+}
+
+.payment-stat .amount {
+    display: block;
+    font-size: 1.3rem;
+    font-weight: bold;
+    color: #2c3e50;
+}
+
+.payment-stat .amount.paid {
+    color: #28a745;
+}
+
+.payment-stat .amount.pending {
+    color: #ffc107;
+}
+
+.payments-history {
+    background: white;
+    padding: 15px;
+    border-radius: 8px;
+    margin-top: 15px;
+}
+
+.payments-history h5 {
+    font-size: 1rem;
+    color: #495057;
+    margin-bottom: 10px;
+}
+
+.payments-history table {
+    margin: 0;
+}
+
+.payments-history thead th {
+    background: #f8f9fa;
+    border-bottom: 2px solid #dee2e6;
+    font-size: 0.85rem;
+    padding: 8px;
+}
+
+.payments-history tbody td {
+    padding: 8px;
+    font-size: 0.9rem;
+    border-bottom: 1px solid #f1f3f5;
+}
+
+// ============================================================================
+// RESUMEN DE CAMBIOS
+// ============================================================================
+// 1. Agregada sección "Estado de Pago" en el modal de detalles
+// 2. Muestra: Total a Pagar, Total Pagado, Saldo Pendiente, Estado
+// 3. Incluye botón "Cobrar" (renderizado con renderPaymentButton)
+// 4. Muestra historial de pagos si existen
+// 5. Event listener para abrir el modal de pago desde detalles
+// 6. CSS profesional para la visualización
+
+// ============================================================================
+// NOTA IMPORTANTE
+// ============================================================================
+// El método renderPaymentButton() que ya se agregó en INSTRUCTIONS_OrderView.txt
+// funciona tanto para las tarjetas como para el modal de detalles, ya que:
+// - Valida el estado de la orden (Finalizado/Entregado)
+// - Verifica el saldo pendiente
+// - Retorna un botón habilitado, deshabilitado o "Pagado"

@@ -1,8 +1,11 @@
 import OrderModel from '../models/OrderModel.js';
 import OrderView from '../views/OrderView.js';
+import PaymentView from '../views/PaymentView.js';
+import Toast from '../utils/toast.js';
 import VehicleModel from '../models/VehicleModel.js';
 import ClientModel from '../models/ClientModel.js';
 import API from '../utils/api.js';
+
 
 /**
  * Controlador de Órdenes - Versión Mejorada
@@ -12,14 +15,18 @@ export default class OrderController {
     constructor() {
         this.model = new OrderModel();
         this.view = new OrderView();
+        this.paymentView = new PaymentView();
         this.api = new API();
         this.vehicleModel = new VehicleModel(this.api);
         this.clientModel = new ClientModel(); // ClientModel usually instantiates its own API or uses singleton. I'll verify.
         
         // Estado
-        this.currentPage = 1;
-        this.perPage = 20;
         this.orders = [];
+        this.pagination = {
+            page: 1,
+            total: 0,
+            pages: 1
+        };
         
         // Vincular eventos
         this.view.bindAction(this.handleAction.bind(this));
@@ -42,20 +49,30 @@ export default class OrderController {
     /**
      * Carga las órdenes desde el servidor.
      */
-    async loadOrders() {
+    async loadOrders(page = 1, filters = {}) {
         try {
-            const response = await this.model.getOrders(this.currentPage, this.perPage);
+            this.view.showLoading();
+            const queryParams = {
+                page,
+                per_page: 10,
+                ...filters
+            };
+            const response = await this.model.getOrders(queryParams.page, queryParams.per_page);
             
             this.orders = response.items || [];
-            
-            this.view.render(this.orders, {
-                current_page: response.current_page || 1,
+            this.pagination = {
+                page: response.current_page || 1,
                 pages: response.pages || 1,
                 total: response.total || 0
-            });
+            };
+            
+            this.view.render(this.orders, this.pagination);
         } catch (error) {
-            console.error('Error al cargar órdenes:', error);
-            this.view.render([], {});
+            console.error('Error cargando órdenes:', error);
+            Toast.error('Error al cargar órdenes. Intente nuevamente.');
+            this.view.render([], {}); // Render empty list on error
+        } finally {
+            this.view.hideLoading();
         }
     }
 
@@ -67,8 +84,11 @@ export default class OrderController {
             case 'view':
                 await this.viewOrder(id);
                 break;
-            case 'edit':
+            case "edit":
                 await this.editOrder(id);
+                break;
+            case "payment":
+                await this.handlePaymentAction(id);
                 break;
             case 'delete':
                 if (confirm('¿Está seguro de eliminar esta orden?')) {
@@ -85,14 +105,17 @@ export default class OrderController {
      */
     async viewOrder(id) {
         try {
+            this.view.showLoading();
             const order = await this.model.getOrderById(id);
             if (!order) {
                 throw new Error("La orden no devolvió datos");
             }
             this.view.showOrderDetails(order);
         } catch (error) {
-            console.error('Error al cargar orden:', error);
-            alert('Error al cargar detalles de la orden: ' + (error.message || 'Error desconocido'));
+            console.error('Error al cargar detalles de la orden:', error);
+            Toast.error('Error al cargar detalles de la orden: ' + (error.message || 'Error desconocido'));
+        } finally {
+            this.view.hideLoading();
         }
     }
 
@@ -101,6 +124,7 @@ export default class OrderController {
      */
     async editOrder(id) {
         try {
+            this.view.showLoading();
             // Cargar la orden
             const order = await this.model.getOrderById(id);
             
@@ -124,7 +148,9 @@ export default class OrderController {
             });
         } catch (error) {
             console.error('Error al cargar datos para edición:', error);
-            alert('No se pudo cargar el formulario de edición');
+            Toast.error('No se pudo cargar el formulario de edición: ' + (error.message || 'Error desconocido'));
+        } finally {
+            this.view.hideLoading();
         }
     }
 
@@ -219,8 +245,36 @@ export default class OrderController {
      * Maneja la búsqueda.
      */
     handleSearch(query) {
-        // Búsqueda local en vista, o implementar servidor.
-        console.log('Búsqueda:', query);
+        const searchTerm = query.toLowerCase().trim();
+        
+        // Si el input está vacío, restaurar lista completa
+        if (!searchTerm) {
+            this.view.updateOrderList(this.orders);
+            return;
+        }
+
+        // Filtrar lista local (this.orders tiene la página actual cargada, 
+        // idealmente sería sobre TODO el dataset si fuera pequeño, pero el requisito dice "lista local")
+        // Nota: Si se requiere buscar en TODAS las órdenes del servidor, se necesitaría llamar a la API.
+        // El requisito dice "Si hay texto, filtra la lista local (this.orders, etc.)".
+        
+        const filtered = this.orders.filter(order => {
+            const placa = (order.placa || '').toLowerCase();
+            const cliente = (order.cliente_nombre || '').toLowerCase();
+            const tecnico = (order.tecnico_nombre || '').toLowerCase();
+            const marca = (order.marca || '').toLowerCase();
+            const modelo = (order.modelo || '').toLowerCase();
+            const id = (order.id || '').toString();
+
+            return placa.includes(searchTerm) ||
+                   cliente.includes(searchTerm) ||
+                   tecnico.includes(searchTerm) ||
+                   marca.includes(searchTerm) ||
+                   modelo.includes(searchTerm) ||
+                   id.includes(searchTerm);
+        });
+
+        this.view.updateOrderList(filtered);
     }
 
     /**
@@ -307,6 +361,81 @@ export default class OrderController {
         } catch (error) {
             console.error('Error al cargar clientes:', error);
             return [];
+        }
+    }
+
+    /**
+     * Maneja la acción de pago.
+     */
+    async handlePaymentAction(orderId) {
+        try {
+            const balance = await this.api.get(`/payments/order/${orderId}/balance`);
+            const order = await this.api.get(`/orders/${orderId}`);
+            
+            const paymentData = {
+                ...balance,
+                // CRUCIAL: Mapear estado_orden (backend) a estado_nombre (frontend view)
+                estado_nombre: balance.estado_orden || order.estado_nombre || '',
+                cliente_nombre: order.cliente_nombre || 'Cliente',
+                id: orderId,
+                total_estimado: balance.total_estimado, // Asegurar compatibilidad
+                total_pagado: balance.total_pagado,
+                saldo_pendiente: balance.saldo_pendiente,
+                pagos: balance.pagos
+            };
+
+            this.showPaymentModal(paymentData);
+        } catch (error) {
+            console.error('Error al preparar pago:', error);
+            Toast.error('Error al cargar info de pago');
+        }
+    }
+
+    showPaymentModal(orderData) {
+        if (!this.paymentView) this.paymentView = new PaymentView();
+        
+        // Enlazar el evento de envío
+        this.paymentView.onSubmitPayment = async (paymentDetails) => {
+            await this.processPayment(paymentDetails);
+        };
+        
+        // Mostrar el modal
+        this.paymentView.showPaymentModal(orderData);
+    }
+
+    async processPayment(details) {
+        try {
+            await this.api.post('/payments/', details);
+            Toast.success('Pago registrado exitosamente');
+            
+            // Verificar si se completó el pago
+            const balance = await this.api.get(`/payments/order/${details.orden_id}/balance`);
+            
+            if (balance.pagado_completamente) {
+                // Preguntar si desea cambiar a Entregado
+                if (confirm('✅ ¡Pago Completado!\n\nLa orden ha sido pagada en su totalidad.\n¿Desea marcar la orden como "Entregado" y finalizar el proceso?')) {
+                    try {
+                        // Buscar ID del estado Entregado
+                        const estados = await this.api.get('/orders/estados');
+                        const estadoEntregado = estados.find(e => e.nombre_estado === 'Entregado');
+                        
+                        if (estadoEntregado) {
+                            await this.api.put(`/orders/${details.orden_id}/status`, { estado_id: estadoEntregado.id });
+                            Toast.success('Orden marcada como Entregada');
+                        }
+                    } catch (err) {
+                        console.error('Error al cambiar estado:', err);
+                        Toast.error('Pago registrado, pero hubo error al cambiar estado');
+                    }
+                }
+            }
+            
+            await this.loadOrders(); 
+            return { success: true };
+        } catch (error) {
+            console.error('Error al procesar pago:', error);
+            Toast.error(error.message || 'Error al procesar pago');
+            throw error;
         }
     }
 }

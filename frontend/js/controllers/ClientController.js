@@ -17,6 +17,7 @@ export default class ClientController {
             this.view.bindEditClient(this.handleEditClient.bind(this));
             this.view.bindUpdateClient(this.handleUpdateClient.bind(this));
             this.view.bindViewOrder(this.handleViewOrder.bind(this));
+            this.view.bindSearch(this.handleSearch.bind(this));
             
             this.view.bindSaveVehicle(this.handleSaveVehicle.bind(this));
             this.view.bindVehicleAction(this.handleVehicleAction.bind(this));
@@ -25,6 +26,22 @@ export default class ClientController {
             console.error('Error init ClientController', error);
             this.view.render([]);
         }
+    }
+
+    handleSearch(query) {
+        const term = query.toLowerCase().trim();
+        if (!term) {
+            this.view.updateClientList(this.clients);
+            return;
+        }
+
+        const filtered = this.clients.filter(c => 
+            (c.nombre && c.nombre.toLowerCase().includes(term)) || 
+            (c.apellido_p && c.apellido_p.toLowerCase().includes(term)) ||
+            (c.apellido_m && c.apellido_m.toLowerCase().includes(term)) ||
+            (c.ci && c.ci.toLowerCase().includes(term))
+        );
+        this.view.updateClientList(filtered);
     }
 
     async handleSelectClient(id) {

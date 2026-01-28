@@ -1,9 +1,11 @@
 import PaymentModel from '../models/PaymentModel.js';
 import PaymentView from '../views/PaymentView.js';
+import Toast from '../utils/toast.js';
 
 /**
- * Controlador de Pagos
+ * Controlador de Pagos - Versión Mejorada
  * Coordina la lógica de gestión de pagos entre vista y modelo.
+ * Integrado con backend real y manejo robusto de errores.
  */
 export default class PaymentController {
     constructor() {
@@ -18,7 +20,7 @@ export default class PaymentController {
      * Inicializa la vista cargando los pagos.
      */
     async init() {
-        // Bind connections here to ensure view is ready or just update properties
+        // Vincular eventos de la vista
         this.view.bindNewPayment(this.handleNewPayment.bind(this));
         this.view.bindSubmitPayment(this.handleSubmitPayment.bind(this));
         this.view.bindViewPayment(this.handleViewPayment.bind(this));
@@ -28,11 +30,14 @@ export default class PaymentController {
     }
 
     /**
-     * Carga los pagos desde el servidor.
+     * Carga los pagos desde el servidor con información detallada.
      */
     async loadPayments() {
         try {
-            const [payments, summary] = await Promise.all([
+            // Mostrar indicador de carga si es necesario
+            // this.view.showLoading();
+
+            const [paymentsData, summary] = await Promise.all([
                 this.model.getPayments(this.currentFilters),
                 this.model.getRevenueSummary(
                     this.currentFilters.fecha_inicio,
@@ -40,19 +45,42 @@ export default class PaymentController {
                 )
             ]);
 
-            this.view.render(payments, summary);
+            // Los pagos vienen del backend con toda la información necesaria
+            // Estructura: { id, orden_id, monto, metodo_pago, fecha_pago, cliente_nombre, placa }
+            this.view.render(paymentsData, summary);
+            
+            // this.view.hideLoading();
         } catch (error) {
             console.error('Error al cargar pagos:', error);
-            alert('No se pudieron cargar los pagos');
+            
+            // Determinar tipo de error
+            if (error.message.includes('Network') || error.message.includes('fetch')) {
+                Toast.show('No se pudo conectar con el servidor. Verifica tu conexión.', 'error');
+            } else if (error.status === 401) {
+                Toast.show('Sesión expirada. Por favor inicia sesión nuevamente.', 'warning');
+                // Redirigir a login si es necesario
+                setTimeout(() => {
+                    window.location.hash = '#/login';
+                }, 2000);
+            } else {
+                Toast.show('Error al cargar pagos. Intenta recargar la página.', 'error');
+            }
+            
+            // Renderizar vista vacía
             this.view.render([], null);
         }
     }
 
     /**
-     * Maneja el registro de un nuevo pago.
+     * Maneja el registro de un nuevo pago desde la sección de pagos.
+     * (Normalmente los pagos se crean desde OrderController)
      */
     handleNewPayment() {
-        this.view.showPaymentModal();
+        // Mostrar mensaje informativo
+        Toast.show('Los pagos se registran desde la Gestión de Órdenes usando el botón "Cobrar"', 'info');
+        
+        // Opcionalmente, podrías mostrar un modal simple para buscar una orden
+        // this.view.showPaymentModal();
     }
 
     /**
@@ -61,14 +89,54 @@ export default class PaymentController {
      */
     async handleSubmitPayment(formData) {
         try {
-            await this.model.createPayment(formData);
-            // Modal closes automatically along with submit handler in view, 
-            // but we can enforce logic here or show success
-            alert('Pago registrado exitosamente');
+            const result = await this.model.createPayment(formData);
+            
+            console.log('Pago registrado:', result);
+            
+            // Mostrar notificación de éxito
+            Toast.show(`Pago de Bs. ${formData.monto} registrado exitosamente`, 'success');
+            
+            // Recargar pagos para mostrar el nuevo registro
             await this.loadPayments();
+            
+            return result;
         } catch (error) {
             console.error('Error al registrar pago:', error);
-            alert('No se pudo registrar el pago: ' + (error.message || 'Error desconocido'));
+            
+            // Manejo detallado de errores del backend
+            let errorMessage = 'No se pudo registrar el pago';
+            
+            if (error.response) {
+                // Error del backend con respuesta estructurada
+                const errorData = error.response;
+                
+                if (errorData.msg) {
+                    errorMessage = errorData.msg;
+                    
+                    // Errores específicos del backend
+                    if (errorData.msg.includes('no ha sido finalizada')) {
+                        Toast.show(
+                            `No se puede cobrar: La orden debe estar en estado "Finalizado" o "Entregado". Estado actual: ${errorData.estado_actual || 'Desconocido'}`,
+                            'warning',
+                            5000
+                        );
+                    } else if (errorData.msg.includes('excede el saldo')) {
+                        Toast.show(
+                            `Monto excede el saldo pendiente. Saldo disponible: Bs. ${errorData.saldo_pendiente || 0}`,
+                            'warning',
+                            5000
+                        );
+                    } else {
+                        Toast.show(errorMessage, 'error');
+                    }
+                }
+            } else if (error.message.includes('Network')) {
+                Toast.show('Error de conexión. Verifica que el backend esté corriendo.', 'error');
+            } else {
+                Toast.show(errorMessage + ': ' + (error.message || 'Error desconocido'), 'error');
+            }
+            
+            throw error; // Re-lanzar para que el caller pueda manejarlo
         }
     }
 
@@ -78,28 +146,51 @@ export default class PaymentController {
      */
     async handleViewPayment(id) {
         try {
-            // Can fetch details from server if needed, or find in current list
-            // Fetching fresh ensures data integrity
-            // Currently using API directly via model
-            const paymentResponse = await this.model.getPaymentById(id);
-            // API might return wrapped object, check structure
-            const payment = paymentResponse; 
+            // Obtener detalles del pago desde el backend
+            const payment = await this.model.getPaymentById(id);
             
             if (payment) {
                 this.view.showDetailModal(payment);
+            } else {
+                Toast.show('No se encontró el pago solicitado', 'warning');
             }
         } catch (error) {
-            console.error(error);
-            alert('No se pudo cargar el detalle del pago');
+            console.error('Error al cargar detalle del pago:', error);
+            Toast.show('No se pudo cargar el detalle del pago', 'error');
         }
     }
 
     /**
-     * Maneja la aplicación de filtros.
+     * Maneja la aplicación de filtros de fechas.
      * @param {Object} filters - Filtros a aplicar.
      */
     async handleApplyFilters(filters) {
+        // Validar fechas
+        if (filters.fecha_inicio && filters.fecha_fin) {
+            const inicio = new Date(filters.fecha_inicio);
+            const fin = new Date(filters.fecha_fin);
+            
+            if (inicio > fin) {
+                Toast.show('La fecha de inicio no puede ser mayor a la fecha de fin', 'warning');
+                return;
+            }
+        }
+        
         this.currentFilters = filters;
+        
+        // Mostrar mensaje informativo mientras carga
+        if (filters.fecha_inicio || filters.fecha_fin) {
+            Toast.show('Aplicando filtros...', 'info', 1500);
+        }
+        
+        await this.loadPayments();
+    }
+
+    /**
+     * Método público para recargar pagos desde otros controladores.
+     * Útil cuando OrderController registra un pago y quiere actualizar PaymentController.
+     */
+    async refresh() {
         await this.loadPayments();
     }
 }
