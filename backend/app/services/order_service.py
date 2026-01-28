@@ -69,32 +69,41 @@ class OrderService:
             servicios_data = data.get('servicios', [])
             total_servicios = 0.0
             
-            for servicio_data in servicios_data:
-                servicio = Servicio.query.filter_by(id=servicio_data['servicio_id'], activo=True).first()
+            for item in servicios_data:
+                # Soporte para lista de IDs [1, 4] o lista de objetos [{id:1}, ...]
+                if isinstance(item, int):
+                    servicio_id = item
+                    precio_aplicado = None
+                else:
+                    servicio_id = item.get('servicio_id') or item.get('id')
+                    precio_aplicado = item.get('precio_aplicado')
+
+                servicio = Servicio.query.filter_by(id=servicio_id, activo=True).first()
                 if not servicio:
-                    raise ValueError(f"Servicio con ID {servicio_data['servicio_id']} no encontrado")
+                    raise ValueError(f"Servicio con ID {servicio_id} no encontrado")
                 
                 # Usar precio proporcionado o el precio actual del servicio
-                precio_aplicado = servicio_data.get('precio_aplicado', servicio.precio)
+                actual_precio = precio_aplicado if precio_aplicado is not None else servicio.precio
                 
                 detalle = OrdenDetalleServicio(
                     orden_id=new_order.id,
                     servicio_id=servicio.id,
-                    precio_aplicado=precio_aplicado
+                    precio_aplicado=actual_precio
                 )
                 db.session.add(detalle)
-                total_servicios += precio_aplicado
+                total_servicios += actual_precio
 
             # Procesar repuestos con validación y descuento de stock
             repuestos_data = data.get('repuestos', [])
             total_repuestos = 0.0
             
-            for repuesto_data in repuestos_data:
-                repuesto = Repuesto.query.filter_by(id=repuesto_data['repuesto_id'], activo=True).first()
+            for item in repuestos_data:
+                repuesto_id = item.get('repuesto_id') or item.get('id')
+                cantidad = item.get('cantidad', 1)
+
+                repuesto = Repuesto.query.filter_by(id=repuesto_id, activo=True).first()
                 if not repuesto:
-                    raise ValueError(f"Repuesto con ID {repuesto_data['repuesto_id']} no encontrado")
-                
-                cantidad = repuesto_data.get('cantidad', 1)
+                    raise ValueError(f"Repuesto con ID {repuesto_id} no encontrado")
                 
                 # Validar stock disponible
                 if repuesto.stock < cantidad:
@@ -104,7 +113,7 @@ class OrderService:
                     )
                 
                 # Usar precio proporcionado o el precio actual del repuesto
-                precio_unitario = repuesto_data.get('precio_unitario_aplicado', repuesto.precio_venta)
+                precio_unitario = item.get('precio_unitario_aplicado', repuesto.precio_venta)
                 
                 # Crear detalle
                 detalle = OrdenDetalleRepuesto(
@@ -199,36 +208,42 @@ class OrderService:
             # ==============================================================================
             
             if 'servicios' in data:
-                nuevos_servicios = data['servicios']  # Lista de {servicio_id, precio_aplicado (opcional)}
+                nuevos_servicios = data['servicios']
                 
-                # Obtener IDs de servicios actuales y nuevos
+                # Normalizar lista de IDs o objetos
+                nuevos_servicios_map = {}
+                for item in nuevos_servicios:
+                    if isinstance(item, int):
+                         sid = item
+                         nuevos_servicios_map[sid] = {'servicio_id': sid}
+                    else:
+                         sid = item.get('servicio_id') or item.get('id')
+                         nuevos_servicios_map[sid] = item
+                
                 servicios_actuales = {d.servicio_id: d for d in order.detalles_servicios}
-                nuevos_servicios_ids = {s['servicio_id'] for s in nuevos_servicios}
-                
+                nuevos_ids = set(nuevos_servicios_map.keys())
+
                 # ELIMINAR servicios que ya no están en la nueva lista
                 for servicio_id, detalle in servicios_actuales.items():
-                    if servicio_id not in nuevos_servicios_ids:
+                    if servicio_id not in nuevos_ids:
                         db.session.delete(detalle)
                 
                 # AGREGAR o MANTENER servicios
-                for servicio_data in nuevos_servicios:
-                    servicio_id = servicio_data['servicio_id']
-                    
-                    # Validar que el servicio existe
-                    servicio = Servicio.query.filter_by(id=servicio_id, activo=True).first()
+                for sid, s_data in nuevos_servicios_map.items():
+                    servicio = Servicio.query.filter_by(id=sid, activo=True).first()
                     if not servicio:
-                        raise ValueError(f"Servicio con ID {servicio_id} no encontrado")
+                         raise ValueError(f"Servicio con ID {sid} no encontrado")
                     
-                    if servicio_id in servicios_actuales:
+                    if sid in servicios_actuales:
                         # Ya existe, actualizar precio si se proporciona
-                        if 'precio_aplicado' in servicio_data:
-                            servicios_actuales[servicio_id].precio_aplicado = servicio_data['precio_aplicado']
+                        if 'precio_aplicado' in s_data:
+                            servicios_actuales[sid].precio_aplicado = s_data['precio_aplicado']
                     else:
                         # No existe, crear nuevo detalle
-                        precio_aplicado = servicio_data.get('precio_aplicado', servicio.precio)
+                        precio_aplicado = s_data.get('precio_aplicado', servicio.precio)
                         nuevo_detalle = OrdenDetalleServicio(
                             orden_id=order_id,
-                            servicio_id=servicio_id,
+                            servicio_id=sid,
                             precio_aplicado=precio_aplicado
                         )
                         db.session.add(nuevo_detalle)
@@ -238,55 +253,50 @@ class OrderService:
             # ==============================================================================
             
             if 'repuestos' in data:
-                nuevos_repuestos = data['repuestos']  # Lista de {repuesto_id, cantidad, precio_unitario_aplicado (opcional)}
+                nuevos_repuestos = data['repuestos']
                 
-                # Obtener repuestos actuales indexados por repuesto_id
+                # Normalizar repuestos
+                nuevos_repuestos_map = {}
+                for item in nuevos_repuestos:
+                    rid = item.get('repuesto_id') or item.get('id')
+                    nuevos_repuestos_map[rid] = item
+
                 repuestos_actuales = {d.repuesto_id: d for d in order.detalles_repuestos}
-                nuevos_repuestos_map = {r['repuesto_id']: r for r in nuevos_repuestos}
-                nuevos_repuestos_ids = set(nuevos_repuestos_map.keys())
+                nuevos_ids = set(nuevos_repuestos_map.keys())
                 
                 # ELIMINAR repuestos que ya no están en la nueva lista (DEVOLVER STOCK)
-                for repuesto_id, detalle in repuestos_actuales.items():
-                    if repuesto_id not in nuevos_repuestos_ids:
-                        # Devolver stock al inventario
-                        repuesto = Repuesto.query.get(detalle.repuesto_id)
+                for rid, detalle in repuestos_actuales.items():
+                    if rid not in nuevos_ids:
+                        repuesto = Repuesto.query.get(rid)
                         if repuesto:
                             repuesto.stock += detalle.cantidad
                         db.session.delete(detalle)
                 
                 # AGREGAR nuevos repuestos o ACTUALIZAR cantidades existentes
-                for repuesto_data in nuevos_repuestos:
-                    repuesto_id = repuesto_data['repuesto_id']
-                    nueva_cantidad = repuesto_data.get('cantidad', 1)
+                for rid, r_data in nuevos_repuestos_map.items():
+                    nueva_cantidad = r_data.get('cantidad', 1)
                     
-                    # Validar que el repuesto existe
-                    repuesto = Repuesto.query.filter_by(id=repuesto_id, activo=True).first()
+                    repuesto = Repuesto.query.filter_by(id=rid, activo=True).first()
                     if not repuesto:
-                        raise ValueError(f"Repuesto con ID {repuesto_id} no encontrado")
+                        raise ValueError(f"Repuesto con ID {rid} no encontrado")
                     
-                    if repuesto_id in repuestos_actuales:
+                    if rid in repuestos_actuales:
                         # Ya existe, ajustar cantidad y stock
-                        detalle_actual = repuestos_actuales[repuesto_id]
+                        detalle_actual = repuestos_actuales[rid]
                         cantidad_actual = detalle_actual.cantidad
                         diferencia = nueva_cantidad - cantidad_actual
                         
                         if diferencia != 0:
-                            # Validar stock disponible si se incrementa
                             if diferencia > 0 and repuesto.stock < diferencia:
                                 raise ValueError(
                                     f"Stock insuficiente para '{repuesto.nombre}'. "
                                     f"Disponible: {repuesto.stock}, Necesario: {diferencia}"
                                 )
-                            
-                            # Ajustar stock
-                            repuesto.stock -= diferencia  # Si diferencia es negativa, suma stock
-                            
-                            # Actualizar cantidad en el detalle
+                            repuesto.stock -= diferencia
                             detalle_actual.cantidad = nueva_cantidad
                         
-                        # Actualizar precio si se proporciona
-                        if 'precio_unitario_aplicado' in repuesto_data:
-                            detalle_actual.precio_unitario_aplicado = repuesto_data['precio_unitario_aplicado']
+                        if 'precio_unitario_aplicado' in r_data:
+                            detalle_actual.precio_unitario_aplicado = r_data['precio_unitario_aplicado']
                     
                     else:
                         # No existe, crear nuevo detalle y descontar stock
@@ -296,17 +306,15 @@ class OrderService:
                                 f"Disponible: {repuesto.stock}, Solicitado: {nueva_cantidad}"
                             )
                         
-                        precio_unitario = repuesto_data.get('precio_unitario_aplicado', repuesto.precio_venta)
+                        precio_unitario = r_data.get('precio_unitario_aplicado', repuesto.precio_venta)
                         
                         nuevo_detalle = OrdenDetalleRepuesto(
                             orden_id=order_id,
-                            repuesto_id=repuesto_id,
+                            repuesto_id=rid,
                             cantidad=nueva_cantidad,
                             precio_unitario_aplicado=precio_unitario
                         )
                         db.session.add(nuevo_detalle)
-                        
-                        # Descontar stock
                         repuesto.stock -= nueva_cantidad
 
             # Recalcular total estimado
@@ -362,7 +370,7 @@ class OrderService:
         return Orden.query.filter_by(id=order_id, activo=True).first()
 
     @staticmethod
-    def get_all_orders(page=1, per_page=10, estado_id=None, search=None):
+    def get_all_orders(page=1, per_page=10, estado_id=None, search=None, client_id=None):
         """
         Obtiene órdenes registradas con paginación, filtros y búsqueda.
         
@@ -371,6 +379,7 @@ class OrderService:
             per_page (int): Elementos por página
             estado_id (int, opcional): Filtrar por estado
             search (str, opcional): Término de búsqueda
+            client_id (int, opcional): Filtrar por ID de cliente
             
         Returns:
             Pagination: Objeto de paginación con las órdenes
@@ -379,6 +388,13 @@ class OrderService:
 
         if estado_id:
             query = query.filter(Orden.estado_id == estado_id)
+        
+        # Filtro por Cliente (Relación Orden -> Auto -> Cliente)
+        # Asumimos que Auto tiene cliente_id o similar relation.
+        # En models.py, Cliente tiene relationship 'autos' backref='cliente'.
+        # Esto implica que Auto tiene una columna 'cliente_id' (foreign key).
+        if client_id:
+            query = query.filter(Auto.cliente_id == client_id)
         
         if search:
             search_term = f"%{search}%"

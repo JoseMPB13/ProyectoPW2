@@ -1,0 +1,6 @@
+import ServiceModel from './models/ServiceModel.js';
+import ServiceView from './views/ServiceView.js';
+import ServiceController from './controllers/ServiceController.js';
+import InventoryModel from './models/InventoryModel.js';
+import InventoryView from './views/InventoryView.js';
+import InventoryController from './controllers/InventoryController.js';

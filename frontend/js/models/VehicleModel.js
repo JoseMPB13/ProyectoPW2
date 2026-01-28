@@ -16,27 +16,43 @@ export default class VehicleModel {
      */
     async getAll() {
         try {
-            // Obtener clientes con sus autos
-            const response = await this.api.get('/clients?per_page=1000');
-            
-            // El backend devuelve {items: [], total, pages}
+            // 1. Fetch Clients (to get vehicles and owners)
+            const clientsResponse = await this.api.get('/clients?per_page=1000');
             let clients = [];
-            if (response && response.items) {
-                clients = response.items;
-            } else if (Array.isArray(response)) {
-                clients = response;
+            if (clientsResponse && clientsResponse.items) {
+                clients = clientsResponse.items;
+            } else if (Array.isArray(clientsResponse)) {
+                clients = clientsResponse;
             }
-            
-            // Extraer todos los autos de todos los clientes
+
+            // 2. Fetch Orders (to get status info)
+            const ordersResponse = await this.api.get('/orders?per_page=1000');
+            let orders = [];
+            if (ordersResponse && ordersResponse.items) {
+                orders = ordersResponse.items;
+            } else if (Array.isArray(ordersResponse)) {
+                orders = ordersResponse;
+            }
+
+            // 3. Map Vehicles
             const vehicles = [];
             clients.forEach(client => {
                 if (client.autos && Array.isArray(client.autos)) {
                     client.autos.forEach(auto => {
+                        // Find latest active order for this vehicle
+                        // Sort orders by id desc (proxy for recent) or date
+                        const vehicleOrders = orders.filter(o => o.auto_id === auto.id || (o.placa === auto.placa));
+                        const lastOrder = vehicleOrders.sort((a,b) => b.id - a.id)[0];
+
                         vehicles.push({
                             ...auto,
                             client_id: client.id,
                             client_name: `${client.nombre} ${client.apellido_p}`,
-                            client_ci: client.ci
+                            client_ci: client.ci,
+                            // Status info from last order
+                            estado_nombre: lastOrder ? lastOrder.estado_nombre : 'Sin Orden',
+                            fecha_ingreso: lastOrder ? lastOrder.fecha_ingreso : null,
+                            technician_name: lastOrder ? lastOrder.tecnico_nombre : '-'
                         });
                     });
                 }

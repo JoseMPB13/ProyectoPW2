@@ -104,19 +104,23 @@ export default class OrderController {
             // Cargar la orden
             const order = await this.model.getOrderById(id);
             
-            // Cargar datos para los dropdowns
-            const [tecnicos, estados, servicios, repuestos] = await Promise.all([
+            // Cargar datos para los dropdowns. Incluir Clientes y Vehículos para edición completa
+            const [tecnicos, estados, servicios, repuestos, clients, vehicles] = await Promise.all([
                 this.loadTecnicos(),
                 this.loadEstados(),
                 this.loadServicios(),
-                this.loadRepuestos()
+                this.loadRepuestos(),
+                this.loadClients(),
+                this.loadVehicles()
             ]);
 
             this.view.showEditModal(order, {
                 tecnicos,
                 estados,
                 servicios,
-                repuestos
+                repuestos,
+                clients,
+                vehicles
             });
         } catch (error) {
             console.error('Error al cargar datos para edición:', error);
@@ -130,7 +134,6 @@ export default class OrderController {
     async handleSubmitEdit(orderId, formData) {
         try {
             await this.model.updateOrder(orderId, formData);
-            alert('Orden actualizada exitosamente');
             await this.loadOrders();
         } catch (error) {
             console.error('Error al actualizar orden:', error);
@@ -145,24 +148,30 @@ export default class OrderController {
         console.log('OrderController: handleNewOrder started');
         try {
             console.log('OrderController: Loading data...');
-            const [tecnicos, vehicles, clients, estados] = await Promise.all([
+            const [tecnicos, vehicles, clients, estados, servicios, repuestos] = await Promise.all([
                 this.loadTecnicos(),
                 this.loadVehicles(),
                 this.loadClients(),
-                this.loadEstados()
+                this.loadEstados(),
+                this.loadServicios(),
+                this.loadRepuestos()
             ]);
             console.log('OrderController: Data loaded', { 
                 tecnicos: tecnicos.length, 
                 vehicles: vehicles.length, 
-                clients: clients.length,
-                estados: estados.length
+                clients: clients.length, 
+                estados: estados.length,
+                servicios: servicios.length,
+                repuestos: repuestos.length
             });
 
             this.view.showNewOrderModal({
                 tecnicos,
                 vehicles,
                 clients,
-                estados
+                estados,
+                servicios,
+                repuestos
             });
             console.log('OrderController: Modal shown');
         } catch (error) {
@@ -177,7 +186,6 @@ export default class OrderController {
     async handleSubmitNewOrder(formData) {
         try {
             await this.model.createOrder(formData);
-            alert('Orden creada exitosamente');
             await this.loadOrders();
         } catch (error) {
             console.error('Error al crear orden:', error);
@@ -289,19 +297,15 @@ export default class OrderController {
     /**
      * Carga la lista de clientes.
      */
+    /**
+     * Carga la lista de clientes.
+     */
     async loadClients() {
         try {
-            // Check if clientModel has getAll, otherwise fallback
-            if (this.clientModel && typeof this.clientModel.getAll === 'function') {
-                 const response = await this.clientModel.getAll();
-                 // ClientModel.getAll usually returns { items: [...], ... }
-                 return response.items || response || [];
-            }
-            
             const response = await this.api.get('/clients?per_page=1000');
             return response.items || response || [];
         } catch (error) {
-            console.error('OrderController: Error al cargar clientes:', error);
+            console.error('Error al cargar clientes:', error);
             return [];
         }
     }

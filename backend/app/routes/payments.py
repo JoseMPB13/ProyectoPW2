@@ -137,26 +137,50 @@ def get_payment_history():
 @jwt_required()
 def get_revenue_summary():
     """
-    Genera un resumen de ingresos totales.
+    Genera un resumen de ingresos totales, con filtrado opcional por fechas.
+    Query Params: fecha_inicio (YYYY-MM-DD), fecha_fin (YYYY-MM-DD)
     """
     try:
-        # Sumar todos los pagos activos con SQL directo
-        total_query = text("SELECT COALESCE(SUM(monto), 0.0) FROM pagos WHERE activo = true")
-        total_revenue = db.session.execute(total_query).scalar()
+        fecha_inicio = request.args.get('fecha_inicio')
+        fecha_fin = request.args.get('fecha_fin')
         
-        # Desglose por método de pago
-        method_query = text("""
+        # Base queries
+        base_where = "WHERE activo = true"
+        params = {}
+        
+        if fecha_inicio:
+            base_where += " AND fecha_pago >= :fecha_inicio"
+            params['fecha_inicio'] = fecha_inicio
+            
+        if fecha_fin:
+            # Asumimos fin del día o comparamos fecha
+            base_where += " AND fecha_pago <= :fecha_fin"
+            # Ajustar para incluir todo el día si es necesario, pero simple string comparison works for standard format often
+            # Mejor usar cast a date o timestamp
+            params['fecha_fin'] = f"{fecha_fin} 23:59:59"
+
+        # 1. Total Ingresos (Sum)
+        sum_sql = text(f"SELECT COALESCE(SUM(monto), 0.0) FROM pagos {base_where}")
+        total_revenue = db.session.execute(sum_sql, params).scalar()
+        
+        # 2. Total Pagos (Count)
+        count_sql = text(f"SELECT COUNT(*) FROM pagos {base_where}")
+        total_count = db.session.execute(count_sql, params).scalar()
+        
+        # 3. Desglose por método
+        method_sql = text(f"""
             SELECT metodo_pago, SUM(monto) as total
             FROM pagos
-            WHERE activo = true
+            {base_where}
             GROUP BY metodo_pago
         """)
         
-        result = db.session.execute(method_query)
+        result = db.session.execute(method_sql, params)
         method_summary = {row.metodo_pago: float(row.total) for row in result}
 
         return jsonify({
-            "total_revenue": float(total_revenue),
+            "total_ingresos": float(total_revenue),
+            "total_pagos": int(total_count),
             "by_method": method_summary
         }), 200
     except Exception as e:

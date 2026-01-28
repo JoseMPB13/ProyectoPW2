@@ -78,13 +78,27 @@ export default class WorkerController {
      */
     async handleSubmitWorker(formData) {
         try {
-            await this.model.createWorker(formData);
+            if (formData.id) {
+                // Actualizar existente
+                const updateData = { ...formData };
+                // Si la contraseña está vacía, no enviarla para evitar que se resetee
+                if (!updateData.password) {
+                    delete updateData.password;
+                }
+                
+                await this.model.updateWorker(formData.id, updateData);
+                this.view.showSuccess('Trabajador actualizado exitosamente');
+            } else {
+                // Crear nuevo
+                await this.model.createWorker(formData);
+                this.view.showSuccess('Trabajador creado exitosamente');
+            }
+            
             this.view.closeModal();
-            this.view.showSuccess('Trabajador creado exitosamente');
             await this.loadWorkers();
         } catch (error) {
-            console.error('Error al crear trabajador:', error);
-            this.view.showError('No se pudo crear el trabajador: ' + error.message);
+            console.error('Error al guardar trabajador:', error);
+            this.view.showError('No se pudo guardar el trabajador: ' + (error.message || 'Error desconocido'));
         }
     }
 

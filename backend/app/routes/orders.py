@@ -17,6 +17,7 @@ orders_bp = Blueprint('orders', __name__)
 def create_order():
     """
     Crea una nueva orden de trabajo con servicios y repuestos en una sola transacción.
+    La lógica de negocio compleja (iteración, stock, cálculos) se delega a OrderService.
     
     Request Body:
         auto_id (int): ID del vehículo.
@@ -24,23 +25,21 @@ def create_order():
         estado_id (int): ID del estado inicial.
         problema_reportado (str): Descripción del problema.
         diagnostico (str, opcional): Diagnóstico técnico.
-        servicios (list, opcional): Array de objetos {servicio_id, precio_aplicado (opcional)}
-        repuestos (list, opcional): Array de objetos {repuesto_id, cantidad, precio_unitario_aplicado (opcional)}
+        fecha_ingreso (str, opcional): Fecha de ingreso (ISO).
+        fecha_entrega (str, opcional): Fecha estimada de entrega (ISO).
+        servicios (list, opcional): Lista de IDs [1, 2] o lista de objetos.
+        repuestos (list, opcional): Lista de objetos {id: 1, cantidad: 2}.
     
-    Ejemplo:
+    Ejemplo Simplificado:
     {
         "auto_id": 1,
         "tecnico_id": 2,
         "estado_id": 1,
         "problema_reportado": "Motor hace ruido extraño",
-        "diagnostico": "Posible falla en correa de distribución",
-        "servicios": [
-            {"servicio_id": 1},
-            {"servicio_id": 3, "precio_aplicado": 150.00}
-        ],
+        "servicios": [1, 3],
         "repuestos": [
-            {"repuesto_id": 5, "cantidad": 2},
-            {"repuesto_id": 8, "cantidad": 1, "precio_unitario_aplicado": 85.50}
+            {"id": 5, "cantidad": 2},
+            {"id": 8, "cantidad": 1}
         ]
     }
     """
@@ -77,8 +76,9 @@ def get_orders():
         per_page = request.args.get('per_page', 10, type=int)
         estado_id = request.args.get('estado_id', type=int)
         search = request.args.get('search', type=str)
+        client_id = request.args.get('client_id', type=int)
 
-        pagination = OrderService.get_all_orders(page, per_page, estado_id, search)
+        pagination = OrderService.get_all_orders(page, per_page, estado_id, search, client_id)
         
         response_items = []
         for order in pagination.items:
@@ -119,32 +119,30 @@ def get_order(order_id):
 def update_order(order_id):
     """
     Actualiza una orden existente con sincronización completa de servicios y repuestos.
+    La lógica de negocio se delega a OrderService.
     
     Request Body:
         tecnico_id (int, opcional): Nuevo técnico asignado
         estado_id (int, opcional): Nuevo estado
         problema_reportado (str, opcional): Actualización del problema
         diagnostico (str, opcional): Actualización del diagnóstico
-        servicios (list, opcional): Lista COMPLETA de servicios que debe tener la orden
-        repuestos (list, opcional): Lista COMPLETA de repuestos que debe tener la orden
+        servicios (list, opcional): Lista COMPLETA de IDs (ej. [1, 5])
+        repuestos (list, opcional): Lista COMPLETA de objetos {id, cantidad}
     
-    Estrategia de Sincronización:
-    - Si un servicio/repuesto no viene en la lista: Se elimina de la BD
-    - Si viene uno nuevo: Se inserta (y se descuenta stock para repuestos)
-    - Si cambia la cantidad de un repuesto: Se ajusta el stock por la diferencia
+    Estrategia de Sincronización (OrderService):
+    - Itera sobre las listas de servicios y repuestos.
+    - Gestiona automáticamente la creación, actualización y borrado de detalles.
+    - Verifica y actualiza el stock de repuestos.
     
     Ejemplo:
     {
         "tecnico_id": 3,
         "estado_id": 2,
         "diagnostico": "Diagnóstico actualizado",
-        "servicios": [
-            {"servicio_id": 1},
-            {"servicio_id": 5, "precio_aplicado": 200.00}
-        ],
+        "servicios": [1, 5],
         "repuestos": [
-            {"repuesto_id": 5, "cantidad": 3},
-            {"repuesto_id": 10, "cantidad": 1}
+            {"id": 5, "cantidad": 3},
+            {"id": 10, "cantidad": 1}
         ]
     }
     """

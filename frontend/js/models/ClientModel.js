@@ -4,28 +4,16 @@ import API from '../utils/api.js';
  * Modelo de Clientes
  */
 export default class ClientModel {
-    constructor() {
-        this.api = new API();
+    constructor(api) {
+        this.api = api;
+        this.endpoint = '/clients';
     }
 
-    /**
-     * Obtiene todos los clientes.
-     */
     async getAll() {
         try {
-            const response = await this.api.get('/clients?per_page=1000');
-            
-            // El backend devuelve {items: [], total, pages, current_page}
-            if (response && response.items) {
-                return response.items;
-            }
-            
-            // Si la respuesta es un array directo (por compatibilidad)
-            if (Array.isArray(response)) {
-                return response;
-            }
-            
-            // Si no hay datos, retornar array vacío
+            const response = await this.api.get(`${this.endpoint}?per_page=1000`);
+            // Backend devuelve { items: [...], ... }
+            if (response && response.items) return response.items;
             return [];
         } catch (error) {
             console.error('Error fetching clients:', error);
@@ -33,15 +21,18 @@ export default class ClientModel {
         }
     }
 
-
-    /**
-     * Obtiene un cliente por ID (simulado filtrando mock o fetch real).
-     */
     async getById(id) {
-        // Si tuviéramos endpoint detallado: await this.api.get(`/clients/${id}`);
-        // Por ahora filtramos de todos
+        // Obtenemos todos y filtramos, o podríamos hacer GET /clients/id si existiera endpoint detalle
         const clients = await this.getAll();
         return clients.find(c => c.id == id);
+    }
+    
+    async create(data) {
+        return await this.api.post(this.endpoint, data);
+    }
+
+    async update(id, data) {
+        return await this.api.put(`${this.endpoint}/${id}`, data);
     }
 
     _getMockData() {

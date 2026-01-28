@@ -51,8 +51,12 @@ export default class API {
             
             // Si es error de autenticación (401), podriamos redirigir al login aquí
             if (response.status === 401) {
-                console.warn('No autorizado o sesión expirada.');
-                // Opcional: window.location.href = '/login.html';
+                console.warn('No autorizado o sesión expirada. Cerrando sesión...');
+                localStorage.removeItem('token');
+                localStorage.removeItem('user');
+                // Si tienes acceso a la instancia de la app o AuthController, úsala.
+                // Como esto es una utilidad, podemos forzar recarga o despacho de evento.
+                window.location.reload(); 
             }
 
             throw new Error(errorData.message || 'Error en la petición');

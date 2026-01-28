@@ -129,3 +129,27 @@ def get_client_vehicles(client_id):
         return jsonify({"msg": str(e)}), 404
     except Exception as e:
         return jsonify({"msg": f"Error al obtener vehículos: {str(e)}"}), 500
+
+# ==============================================================================
+# Endpoint: Actualizar Vehículo
+# ==============================================================================
+@clients_bp.route('/vehicles/<int:vehicle_id>', methods=['PUT'])
+def update_vehicle(vehicle_id):
+    """
+    Actualiza los datos de un vehículo.
+    """
+    data = request.get_json()
+    try:
+        updated_vehicle = ClientService.update_vehicle(
+            vehicle_id=vehicle_id,
+            plate=data.get('plate'),
+            brand=data.get('brand'),
+            model=data.get('model'),
+            year=data.get('year'),
+            color=data.get('color') or data.get('vin')
+        )
+        return jsonify({"msg": "Vehículo actualizado", "vehicle": updated_vehicle.to_dict()}), 200
+    except ValueError as e:
+        return jsonify({"msg": str(e)}), 400
+    except Exception as e:
+        return jsonify({"msg": f"Error interno: {str(e)}"}), 500

@@ -130,3 +130,33 @@ class ClientService:
             raise ValueError("Cliente no encontrado")
         # Relationship in Cliente is 'autos'
         return client.autos
+
+    @staticmethod
+    def update_vehicle(vehicle_id, plate=None, brand=None, model=None, year=None, color=None):
+        """
+        Actualiza un vehículo existente.
+        """
+        vehicle = Auto.query.get(vehicle_id)
+        if not vehicle:
+            raise ValueError("Vehículo no encontrado")
+
+        if plate and plate != vehicle.placa:
+            # Check unique plate if changed
+            if Auto.query.filter_by(placa=plate).first():
+                raise ValueError(f"La placa {plate} ya está registrada en otro vehículo")
+            vehicle.placa = plate
+        
+        if brand: vehicle.marca = brand
+        if model: vehicle.modelo = model
+        if year: vehicle.anio = year
+        if color: vehicle.color = color
+
+        try:
+            db.session.commit()
+            return vehicle
+        except IntegrityError:
+            db.session.rollback()
+            raise ValueError("Error de integridad al actualizar vehículo")
+        except Exception as e:
+            db.session.rollback()
+            raise e

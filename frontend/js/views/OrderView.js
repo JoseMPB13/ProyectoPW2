@@ -397,10 +397,10 @@ export default class OrderView {
                     </div>
 
                     <!-- Servicios -->
-                    ${this.renderServicesSection(order.servicios)}
+                    ${this.renderServicesSection(order.detalles_servicios)}
 
                     <!-- Repuestos -->
-                    ${this.renderPartsSection(order.repuestos)}
+                    ${this.renderPartsSection(order.detalles_repuestos)}
 
                     <!-- Totales -->
                     <div class="detail-section totals-section">
@@ -431,7 +431,9 @@ export default class OrderView {
      * Renderiza la sección de servicios en el modal de detalles.
      */
     renderServicesSection(servicios) {
-        if (!servicios || servicios.length === 0) {
+        const list = servicios || [];
+        
+        if (list.length === 0) {
             return `
                 <div class="detail-section">
                     <h4>Servicios</h4>
@@ -442,21 +444,26 @@ export default class OrderView {
 
         return `
             <div class="detail-section">
-                <h4>Servicios (${servicios.length})</h4>
+                <h4>Servicios (${list.length})</h4>
                 <table class="detail-table">
                     <thead>
                         <tr>
                             <th>Servicio</th>
-                            <th>Precio</th>
+                            <th>Precio Aplicado</th>
                         </tr>
                     </thead>
                     <tbody>
-                        ${servicios.map(s => `
-                            <tr>
-                                <td>${s.nombre || 'Servicio'}</td>
-                                <td>Bs. ${this.formatCurrency(s.precio_aplicado || s.precio)}</td>
-                            </tr>
-                        `).join('')}
+                        ${list.map(s => {
+                            // Backend envía 'servicio_nombre'
+                            const nombre = s.servicio_nombre || (s.servicio ? s.servicio.nombre : 'Servicio Desconocido');
+                            const precio = s.precio_aplicado !== undefined ? Number(s.precio_aplicado) : (Number(s.precio) || 0);
+                            return `
+                                <tr>
+                                    <td>${nombre}</td>
+                                    <td>Bs. ${this.formatCurrency(precio)}</td>
+                                </tr>
+                            `;
+                        }).join('')}
                     </tbody>
                 </table>
             </div>
@@ -467,7 +474,9 @@ export default class OrderView {
      * Renderiza la sección de repuestos en el modal de detalles.
      */
     renderPartsSection(repuestos) {
-        if (!repuestos || repuestos.length === 0) {
+        const list = repuestos || [];
+        
+        if (list.length === 0) {
             return `
                 <div class="detail-section">
                     <h4>Repuestos</h4>
@@ -478,25 +487,28 @@ export default class OrderView {
 
         return `
             <div class="detail-section">
-                <h4>Repuestos (${repuestos.length})</h4>
+                <h4>Repuestos (${list.length})</h4>
                 <table class="detail-table">
                     <thead>
                         <tr>
                             <th>Repuesto</th>
                             <th>Cantidad</th>
-                            <th>Precio Unit.</th>
+                            <th>P. Unitario</th>
                             <th>Subtotal</th>
                         </tr>
                     </thead>
                     <tbody>
-                        ${repuestos.map(r => {
-                            const cantidad = r.cantidad || 1;
-                            const precio = r.precio_unitario_aplicado || r.precio_venta || 0;
+                        ${list.map(r => {
+                            // Backend envía 'repuesto_nombre'
+                            const nombre = r.repuesto_nombre || (r.repuesto ? r.repuesto.nombre : 'Repuesto Desconocido');
+                            const cantidad = Number(r.cantidad) || 0;
+                            const precio = r.precio_unitario_aplicado !== undefined ? Number(r.precio_unitario_aplicado) : (Number(r.precio) || 0);
                             const subtotal = cantidad * precio;
+                            
                             return `
                                 <tr>
-                                    <td>${r.nombre || 'Repuesto'}</td>
-                                    <td>${cantidad}</td>
+                                    <td>${nombre}</td>
+                                    <td class="text-center">${cantidad}</td>
                                     <td>Bs. ${this.formatCurrency(precio)}</td>
                                     <td>Bs. ${this.formatCurrency(subtotal)}</td>
                                 </tr>
@@ -511,7 +523,14 @@ export default class OrderView {
     /**
      * Muestra el modal para editar una orden.
      */
+    /**
+     * Muestra el modal para editar una orden.
+     */
     showEditModal(order, formData) {
+        // Encontrar cliente actual basado en el auto de la orden
+        const currentAuto = (formData.vehicles || []).find(v => v.id == order.auto_id);
+        const currentClientId = currentAuto ? currentAuto.cliente_id : null;
+
         const modal = document.createElement('div');
         modal.className = 'modal-overlay open';
         modal.innerHTML = `
@@ -523,6 +542,33 @@ export default class OrderView {
                 
                 <form id="editOrderForm" class="modal-body">
                     <div class="form-grid">
+                        
+                        <!-- Cliente -->
+                        <div class="form-group">
+                            <label for="editOrderClient">Cliente *</label>
+                            <select id="editOrderClient" name="client_id" class="form-control" required>
+                                <option value="">Seleccionar cliente...</option>
+                                ${(formData.clients || []).map(c => `
+                                    <option value="${c.id}" ${c.id == currentClientId ? 'selected' : ''}>
+                                        ${c.nombre} ${c.apellido || ''}
+                                    </option>
+                                `).join('')}
+                            </select>
+                        </div>
+
+                        <!-- Vehículo -->
+                        <div class="form-group">
+                            <label for="editOrderAuto">Vehículo *</label>
+                            <select id="editOrderAuto" name="auto_id" class="form-control" required>
+                                ${currentClientId ? 
+                                    (formData.vehicles || [])
+                                        .filter(v => v.cliente_id == currentClientId)
+                                        .map(v => `<option value="${v.id}" ${v.id == order.auto_id ? 'selected' : ''}>${v.marca} ${v.modelo} (${v.placa})</option>`).join('') 
+                                    : '<option value="">Seleccione un cliente primero</option>'
+                                }
+                            </select>
+                        </div>
+
                         <!-- Técnico Asignado -->
                         <div class="form-group">
                             <label for="editTecnico">Técnico Asignado *</label>
@@ -548,7 +594,6 @@ export default class OrderView {
                             </select>
                         </div>
 
-
                         <!-- Fechas -->
                         <div class="form-group">
                             <label for="editFechaIngreso">Fecha de Ingreso</label>
@@ -560,6 +605,7 @@ export default class OrderView {
                                 value="${order.fecha_ingreso ? order.fecha_ingreso.slice(0, 16) : ''}"
                             >
                         </div>
+
 
                         <div class="form-group">
                             <label for="editFechaEntrega">Fecha de Entrega/Salida</label>
@@ -603,8 +649,8 @@ export default class OrderView {
                     </div>
 
                     <!-- Secciones Dinámicas -->
-                    ${this.renderServicesTable(data.servicios || [], order.detalles_servicios || [])}
-                    ${this.renderPartsTable(data.repuestos || [], order.detalles_repuestos || [])}
+                    ${this.renderServicesTable(formData.servicios || [], order.detalles_servicios || [])}
+                    ${this.renderPartsTable(formData.repuestos || [], order.detalles_repuestos || [])}
 
                     <!-- Total (Pie) -->
                     <div class="form-group mt-4" style="text-align: right;">
@@ -626,8 +672,45 @@ export default class OrderView {
 
         document.body.appendChild(modal);
         this.attachModalEvents(modal);
-        this.attachDetailsLogic(modal, data.servicios || [], data.repuestos || []);
+        this.attachDetailsLogic(modal, formData.servicios || [], formData.repuestos || []);
+        this.attachEditCascade(modal, formData.vehicles || []);
         this.attachFormEvents(modal, order.id);
+    }
+
+    attachEditCascade(modal, vehicles) {
+        const clientSelect = modal.querySelector('#editOrderClient');
+        const autoSelect = modal.querySelector('#editOrderAuto');
+        
+        if (clientSelect && autoSelect) {
+            clientSelect.addEventListener('change', () => {
+                const clientId = parseInt(clientSelect.value);
+                
+                // Reset select de autos
+                autoSelect.innerHTML = '<option value="">Seleccionar vehículo...</option>';
+                autoSelect.disabled = true;
+
+                if (clientId) {
+                    // Filtrar vehículos del cliente
+                    const clientVehicles = vehicles.filter(v => v.cliente_id === clientId);
+                    
+                    if (clientVehicles.length > 0) {
+                        clientVehicles.forEach(v => {
+                            const option = document.createElement('option');
+                            option.value = v.id;
+                            option.textContent = `${v.marca} ${v.modelo} (${v.placa})`;
+                            autoSelect.appendChild(option);
+                        });
+                        autoSelect.disabled = false;
+                    } else {
+                        const option = document.createElement('option');
+                        option.textContent = '-- Sin vehículos registrados --';
+                        autoSelect.appendChild(option);
+                    }
+                } else {
+                     autoSelect.innerHTML = '<option value="">Seleccione un cliente primero</option>';
+                }
+            });
+        }
     }
 
 
@@ -742,32 +825,25 @@ export default class OrderView {
             form.addEventListener('submit', (e) => {
                 e.preventDefault();
 
-                // Recolectar Servicios
+                // Recolectar Servicios (IDs)
                 const servicios = [];
                 modal.querySelectorAll('#servicesTableBody tr').forEach(row => {
                     const select = row.querySelector('.service-select');
-                    const price = row.querySelector('.service-price');
                     if (select && select.value) {
-                        servicios.push({
-                            servicio_id: parseInt(select.value),
-                            precio_aplicado: parseFloat(price.value)
-                        });
+                        servicios.push(parseInt(select.value));
                     }
                 });
 
-                // Recolectar Repuestos
+                // Recolectar Repuestos ({id, cantidad})
                 const repuestos = [];
                 modal.querySelectorAll('#partsTableBody tr').forEach(row => {
                     const select = row.querySelector('.part-select');
                     const qty = row.querySelector('.part-qty');
-                    const selectOption = select.options[select.selectedIndex];
-                    const price = parseFloat(selectOption.getAttribute('data-price') || 0);
 
                     if (select && select.value) {
                         repuestos.push({
-                            repuesto_id: parseInt(select.value),
-                            cantidad: parseInt(qty.value),
-                            precio_unitario_aplicado: price
+                            id: parseInt(select.value),
+                            cantidad: parseInt(qty.value)
                         });
                     }
                 });
@@ -894,10 +970,22 @@ export default class OrderView {
                             </select>
                         </div>
 
+                        <!-- Fecha Ingreso -->
+                        <div class="form-group">
+                            <label for="newOrderFechaIngreso">Fecha de Ingreso</label>
+                            <input 
+                                type="datetime-local" 
+                                id="newOrderFechaIngreso" 
+                                name="fecha_ingreso" 
+                                class="form-control"
+                                value="${new Date().toISOString().slice(0, 16)}"
+                            >
+                        </div>
+
                         <!-- Fecha Estimada -->
                         <div class="form-group">
                             <label for="newOrderFechaEntrega">Fecha Estimada de Entrega</label>
-                            <input type="date" id="newOrderFechaEntrega" name="fecha_entrega" class="form-control">
+                            <input type="datetime-local" id="newOrderFechaEntrega" name="fecha_entrega" class="form-control">
                         </div>
                     </div>
 
@@ -912,6 +1000,21 @@ export default class OrderView {
                                 rows="3"
                                 placeholder="Describa detalladamente el problema..."
                                 required
+                                style="width: 100%;"
+                            ></textarea>
+                        </div>
+                    </div>
+
+                    <!-- Diagnóstico (Campo Nuevo) -->
+                     <div class="form-section" style="margin-top: 10px; border-top: 1px solid #eee; padding-top: 15px;">
+                        <div class="form-group full-width">
+                            <label for="newOrderDiagnostico">Diagnóstico / Observaciones</label>
+                            <textarea 
+                                id="newOrderDiagnostico" 
+                                name="diagnostico" 
+                                class="form-control" 
+                                rows="3"
+                                placeholder="Diagnóstico técnico preliminar..."
                                 style="width: 100%;"
                             ></textarea>
                         </div>
@@ -1165,73 +1268,70 @@ export default class OrderView {
         }
     }
     attachNewOrderFormLogic(modal, vehicles) {
-        const form = modal.querySelector('#newOrderForm');
-        const clientSelect = form.querySelector('#newOrderClient');
-        const autoSelect = form.querySelector('#newOrderAuto');
-
-        // Manejar cambio de cliente
-        clientSelect.addEventListener('change', (e) => {
-            const clientId = e.target.value;
-            
-            // Resetear select de autos
-            autoSelect.innerHTML = '<option value="">Seleccionar vehículo...</option>';
-            autoSelect.disabled = !clientId;
-
-            if (clientId) {
-                // Filtrar vehículos del cliente
-                // Nota: Asumimos que data.vehicles tiene client_id o cliente_id.
-                // Revisando VehicleModel/Backend: suelen tener 'cliente_id' o 'client_id'.
-                // Si vehicles viene de VehicleModel.getAll(), tiene 'cliente_id'.
-                const clientVehicles = vehicles.filter(v => v.cliente_id == clientId || v.client_id == clientId);
+        // Lógica de Cascada: Cliente -> Vehículos
+        const clientSelect = modal.querySelector('#newOrderClient');
+        const autoSelect = modal.querySelector('#newOrderAuto');
+        
+        if (clientSelect && autoSelect) {
+            clientSelect.addEventListener('change', () => {
+                const clientId = parseInt(clientSelect.value);
                 
-                if (clientVehicles.length > 0) {
-                    clientVehicles.forEach(v => {
+                // Reset select de autos
+                autoSelect.innerHTML = '<option value="">Seleccionar vehículo...</option>';
+                autoSelect.disabled = true;
+
+                if (clientId) {
+                    // Filtrar vehículos del cliente seleccionado
+                    // Asumimos que los vehículos tienen 'cliente_id'
+                    const clientVehicles = vehicles.filter(v => v.cliente_id === clientId);
+                    
+                    if (clientVehicles.length > 0) {
+                        clientVehicles.forEach(v => {
+                            const option = document.createElement('option');
+                            option.value = v.id;
+                            option.textContent = `${v.marca} ${v.modelo} (${v.placa})`;
+                            autoSelect.appendChild(option);
+                        });
+                        autoSelect.disabled = false;
+                    } else {
                         const option = document.createElement('option');
-                        option.value = v.id;
-                        option.textContent = `${v.placa} - ${v.marca} ${v.modelo}`;
+                        option.textContent = '-- Sin vehículos registrados --';
                         autoSelect.appendChild(option);
-                    });
+                    }
                 } else {
-                    const option = document.createElement('option');
-                    option.value = "";
-                    option.textContent = "Este cliente no tiene vehículos registrados";
-                    autoSelect.appendChild(option);
+                     autoSelect.innerHTML = '<option value="">Seleccione un cliente primero</option>';
                 }
-            } else {
-                 autoSelect.innerHTML = '<option value="">Seleccione un cliente primero</option>';
-            }
-        });
+            });
+        }
+
+        const form = modal.querySelector('#newOrderForm');
+
+
+
 
         // Manejar envío
          form.addEventListener('submit', (e) => {
             e.preventDefault();
             
-            // Recolectar Servicios
+            // Recolectar Servicios (IDs)
             const servicios = [];
             modal.querySelectorAll('#servicesTableBody tr').forEach(row => {
                const select = row.querySelector('.service-select');
-               const price = row.querySelector('.service-price');
                if(select && select.value) {
-                   servicios.push({
-                       servicio_id: parseInt(select.value),
-                       precio_aplicado: parseFloat(price.value)
-                   });
+                   servicios.push(parseInt(select.value));
                }
             });
 
-            // Recolectar Repuestos
+            // Recolectar Repuestos ({id, cantidad})
             const repuestos = [];
              modal.querySelectorAll('#partsTableBody tr').forEach(row => {
                const select = row.querySelector('.part-select');
                const qty = row.querySelector('.part-qty');
-               const selectOption = select.options[select.selectedIndex];
-               const price = parseFloat(selectOption.getAttribute('data-price') || 0);
 
                if(select && select.value) {
                    repuestos.push({
-                       repuesto_id: parseInt(select.value),
-                       cantidad: parseInt(qty.value),
-                       precio_unitario_aplicado: price
+                       id: parseInt(select.value),
+                       cantidad: parseInt(qty.value)
                    });
                }
             });
@@ -1240,7 +1340,9 @@ export default class OrderView {
                 auto_id: form.auto_id.value,
                 tecnico_id: form.tecnico_id.value,
                 problema_reportado: form.problema_reportado.value,
+                diagnostico: form.diagnostico ? form.diagnostico.value : '',
                 estado_id: form.estado_id.value || 1,
+                fecha_ingreso: form.fecha_ingreso ? form.fecha_ingreso.value : null,
                 fecha_entrega: form.fecha_entrega.value || null,
                 total_estimado: form.total_estimado.value ? parseFloat(form.total_estimado.value) : 0,
                 servicios: servicios,

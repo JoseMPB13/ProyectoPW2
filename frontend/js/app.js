@@ -11,6 +11,13 @@ import DashboardView from './views/DashboardView.js';
 import OrderController from './controllers/OrderController.js';
 import WorkerController from './controllers/WorkerController.js';
 import PaymentController from './controllers/PaymentController.js';
+import ServiceController from './controllers/ServiceController.js';
+import InventoryController from './controllers/InventoryController.js';
+import ServiceModel from './models/ServiceModel.js';
+import ServiceView from './views/ServiceView.js';
+import InventoryModel from './models/InventoryModel.js';
+import InventoryView from './views/InventoryView.js';
+import ClientModel from './models/ClientModel.js';
 
 /**
  * Controlador Principal de la Aplicación (App)
@@ -22,12 +29,11 @@ class App {
         // Inicializar AuthController, pasando callback de éxito
         this.authController = new AuthController(() => this.onLoginSuccess());
         
-        // Inyección de Dependencias para VehicleController
+        // Inyección de Dependencias
         this.vehicleModel = new VehicleModel(this.api);
         this.vehicleView = new VehicleView();
         this.vehicleController = new VehicleController(this.vehicleModel, this.vehicleView);
         
-        // Inyección de Dependencias para DashboardController
         this.dashboardModel = new DashboardModel(this.api);
         this.dashboardView = new DashboardView();
         this.dashboardController = new DashboardController(this.dashboardModel, this.dashboardView);
@@ -35,8 +41,19 @@ class App {
         this.orderController = new OrderController();
         this.workerController = new WorkerController();
         this.paymentController = new PaymentController();
-        this.clientController = new ClientController();
+        this.clientModel = new ClientModel(this.api);
+        this.clientController = new ClientController(this.clientModel);
         this.aiController = new AiController();
+        
+        // Nuevos Controladores (Inyección de Dependencias)
+        this.serviceModel = new ServiceModel(this.api);
+        this.serviceView = new ServiceView();
+        this.serviceController = new ServiceController(this.serviceModel, this.serviceView);
+
+        this.inventoryModel = new InventoryModel(this.api);
+        this.inventoryView = new InventoryView();
+        this.inventoryController = new InventoryController(this.inventoryModel, this.inventoryView);
+        
         this.init();
         
         // Exponer la instancia para depuración
@@ -148,6 +165,8 @@ class App {
         let title = 'Dashboard';
         if (viewName === 'dashboard') title = 'Dashboard';
         else if (viewName === 'orders') title = 'Gestión de Órdenes';
+        else if (viewName === 'services') title = 'Gestión de Servicios';
+        else if (viewName === 'inventory') title = 'Inventario de Repuestos';
         else if (viewName === 'vehicles') title = 'Gestión de Vehículos';
         else if (viewName === 'clientes') title = 'Clientes';
         else if (viewName === 'trabajadores') title = 'Trabajadores';
@@ -166,6 +185,12 @@ class App {
                 break;
             case 'orders':
                 this.orderController.init();
+                break;
+            case 'services':
+                this.serviceController.init();
+                break;
+            case 'inventory':
+                this.inventoryController.init();
                 break;
             case 'vehicles':
                 this.vehicleController.init();
@@ -187,8 +212,6 @@ class App {
                     </div>`;
         }
     }
-
-
 }
 
 // Instanciar la aplicación cuando el DOM esté listo
