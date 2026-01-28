@@ -11,7 +11,7 @@ export default class ModalView {
      * @param {string} title - Título del modal.
      * @param {string} contentHTML - Contenido HTML del cuerpo del modal.
      */
-    open(title, contentHTML) {
+    open(title, contentHTML, footerHTML = null) {
         // Cerrar modal previo si existe
         this.close();
 
@@ -23,11 +23,14 @@ export default class ModalView {
             <div class="modal-box">
                 <div class="modal-header">
                     <h3>${title}</h3>
-                    <button class="modal-close-btn">&times;</button>
+                    <button class="modal-close-btn" title="Cerrar">
+                        <i class="fas fa-times"></i>
+                    </button>
                 </div>
                 <div class="modal-body">
                     ${contentHTML}
                 </div>
+                ${footerHTML ? `<div class="modal-footer">${footerHTML}</div>` : ''}
             </div>
         `;
 

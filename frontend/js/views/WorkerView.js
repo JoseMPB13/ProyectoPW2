@@ -19,30 +19,36 @@ export default class WorkerView {
      */
     render(workers = []) {
         this.contentArea.innerHTML = `
-            <div class="workers-view">
-                <!-- Header -->
-                <div class="view-header">
+            <div class="card fade-in">
+                 <!-- Header -->
+                <div class="card-header d-flex justify-content-between align-items-center mb-4 border-bottom pb-3" style="background: transparent;">
                     <div>
-                        <h2>Gestión de Trabajadores</h2>
-                        <p class="text-secondary">Administra los usuarios y permisos del sistema</p>
+                        <h2 class="h3 mb-1" style="font-family: 'Inter', sans-serif; font-weight: 700; color: #1e293b;">Gestión de Trabajadores</h2>
+                        <p class="text-secondary small mb-0">Administra los usuarios y permisos del sistema</p>
                     </div>
-                    <button id="newWorkerBtn" class="btn-primary">
-                        <span>+</span> Nuevo Trabajador
-                    </button>
+                    <div class="d-flex gap-3 align-items-center">
+                         <div class="search-wrapper position-relative">
+                            <i class="fas fa-search position-absolute text-muted" style="left: 12px; top: 50%; transform: translateY(-50%); font-size: 0.9rem;"></i>
+                            <input 
+                                type="text" 
+                                id="searchWorkers" 
+                                placeholder="Buscar..." 
+                                class="form-control pl-5"
+                                style="padding-left: 35px; border-radius: 8px; border: 1px solid #e2e8f0;"
+                            >
+                        </div>
+                        <button id="newWorkerBtn" class="btn btn-primary d-flex align-items-center gap-2 px-4 shadow-sm" style="border-radius: 8px;">
+                            <i class="fas fa-plus"></i>
+                            <span>Nuevo Trabajador</span>
+                        </button>
+                    </div>
                 </div>
 
-                <!-- Filters Bar -->
-                <div class="filters-bar">
-                    <div class="search-box">
-                        <input 
-                            type="text" 
-                            id="searchWorkers" 
-                            placeholder="🔍 Buscar por nombre, correo..." 
-                            class="search-input"
-                        >
-                    </div>
-                    <div class="filter-group">
-                        <select id="filterRole" class="filter-select">
+                <!-- Filters Bar (Secondary) -->
+                <div class="filters-bar mb-4 bg-light p-3 rounded border">
+                    <div class="d-flex align-items-center">
+                        <label for="filterRole" class="mr-3 font-weight-500 text-secondary mb-0">Filtrar por Rol:</label>
+                         <select id="filterRole" class="form-control" style="max-width: 200px;">
                             <option value="">Todos los roles</option>
                             <option value="admin">Administrador</option>
                             <option value="recepcion">Recepción</option>
@@ -51,9 +57,22 @@ export default class WorkerView {
                     </div>
                 </div>
 
-                <!-- Workers Grid -->
-                <div class="workers-grid">
-                    ${this.renderWorkerCards(workers)}
+                <!-- Workers Table -->
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0" style="width: 100%;">
+                        <thead style="background-color: #F8FAFC; border-bottom: 2px solid #e2e8f0;">
+                            <tr>
+                                <th class="py-3 px-4 text-uppercase text-secondary text-xs font-weight-bold tracking-wide border-0">Trabajador</th>
+                                <th class="py-3 px-4 text-uppercase text-secondary text-xs font-weight-bold tracking-wide border-0">Rol</th>
+                                <th class="py-3 px-4 text-uppercase text-secondary text-xs font-weight-bold tracking-wide border-0">Contacto</th>
+                                <th class="py-3 px-4 text-uppercase text-secondary text-xs font-weight-bold tracking-wide border-0">ID</th>
+                                <th class="py-3 px-4 text-uppercase text-secondary text-xs font-weight-bold tracking-wide border-0 text-center">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="workersTableBody">
+                            ${this.renderWorkerTable(workers)}
+                        </tbody>
+                    </table>
                 </div>
             </div>
         `;
@@ -64,55 +83,59 @@ export default class WorkerView {
     /**
      * Renderiza las tarjetas de los trabajadores.
      */
-    renderWorkerCards(workers) {
+    /**
+     * Renderiza las filas de la tabla de trabajadores.
+     */
+    renderWorkerTable(workers) {
         if (!workers || workers.length === 0) {
             return `
-                <div class="empty-state">
-                    <div class="empty-icon">👥</div>
-                    <h3>No hay trabajadores registrados</h3>
-                    <p>Intenta ajustar los filtros o agrega un nuevo trabajador.</p>
-                </div>
+                <tr>
+                    <td colspan="5" class="text-center p-5">
+                        <div class="d-flex flex-column align-items-center justify-content-center">
+                            <div class="text-secondary mb-3"><i class="fas fa-users-slash fa-3x"></i></div>
+                            <h4 class="text-dark">No hay trabajadores registrados</h4>
+                            <p class="text-secondary mb-3">Intenta ajustar los filtros o agrega un nuevo trabajador.</p>
+                        </div>
+                    </td>
+                </tr>
             `;
         }
 
         return workers.map(worker => `
-            <div class="worker-card" data-id="${worker.id}">
-                <div class="worker-card-header">
-                    <div class="worker-avatar">
-                        ${worker.nombre.charAt(0).toUpperCase()}
-                    </div>
-                    <div class="worker-role">
-                         <span class="badge badge-${this.getRoleBadge(worker.rol_nombre)}">
-                            ${worker.rol_nombre || 'Sin Rol'}
-                        </span>
-                    </div>
-                </div>
-                
-                <div class="worker-card-body">
-                    <h3 class="worker-name">${worker.nombre} ${worker.apellido_p || ''}</h3>
-                    <p class="worker-email">${worker.correo || 'N/A'}</p>
-                    
-                    <div class="worker-details">
-                        <div class="detail-item">
-                            <span class="icon">📱</span>
-                            <span>${worker.celular || 'No registrado'}</span>
+            <tr>
+                <td class="py-3 px-4 border-bottom">
+                    <div class="d-flex align-items-center">
+                        <div class="avatar-circle mr-3 bg-light text-primary font-weight-bold d-flex align-items-center justify-content-center rounded-circle" style="width: 36px; height: 36px;">
+                            ${worker.nombre.charAt(0).toUpperCase()}
                         </div>
-                        <div class="detail-item">
-                            <span class="icon">🆔</span>
-                            <span>ID: ${worker.id}</span>
+                        <div>
+                            <div class="font-weight-bold text-dark" style="font-size: 0.95rem;">${worker.nombre} ${worker.apellido_p || ''}</div>
+                            <div class="small text-secondary">${worker.correo || 'N/A'}</div>
                         </div>
                     </div>
-                </div>
-                
-                <div class="worker-card-footer">
-                    <button class="btn-primary-sm" data-action="edit" data-id="${worker.id}">
-                        ✏️ Editar
-                    </button>
-                    <button class="btn-outline-danger btn-sm" data-action="delete" data-id="${worker.id}">
-                        🗑️ Eliminar
-                    </button>
-                </div>
-            </div>
+                </td>
+                <td class="py-3 px-4 border-bottom">
+                     <span class="badge badge-${this.getRoleBadge(worker.rol_nombre)} px-3 py-1 rounded-pill">
+                         ${worker.rol_nombre || 'Sin Rol'}
+                    </span>
+                </td>
+                <td class="py-3 px-4 border-bottom">
+                    <div class="small text-dark"><i class="fas fa-mobile-alt text-secondary mr-2"></i>${worker.celular || 'No registrado'}</div>
+                </td>
+                <td class="py-3 px-4 border-bottom text-secondary font-weight-500">
+                    ID: ${worker.id}
+                </td>
+                <td class="py-3 px-4 border-bottom text-center">
+                    <div class="btn-group" role="group">
+                        <button class="btn btn-sm btn-outline-primary mr-1" data-action="edit" data-id="${worker.id}" title="Editar">
+                             <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger" data-action="delete" data-id="${worker.id}" title="Eliminar">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
         `).join('');
     }
 
@@ -132,55 +155,57 @@ export default class WorkerView {
                         <form id="workerForm">
                             <input type="hidden" id="workerId" value="${worker?.id || ''}">
                             
-                            <div class="form-grid">
+                            <div class="form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
                                 <div class="form-group">
-                                    <label for="nombre">Nombre *</label>
-                                    <input type="text" id="nombre" class="form-control" required value="${worker?.nombre || ''}">
+                                    <label for="nombre" style="display: block; margin-bottom: 0.5rem; font-weight: 500; font-family: 'Inter', sans-serif;">Nombre *</label>
+                                    <input type="text" id="nombre" class="form-control" required value="${worker?.nombre || ''}" style="width: 100%;">
                                 </div>
                                 <div class="form-group">
-                                    <label for="apellidoP">Apellido Paterno *</label>
-                                    <input type="text" id="apellidoP" class="form-control" required value="${worker?.apellido_p || ''}">
+                                    <label for="apellidoP" style="display: block; margin-bottom: 0.5rem; font-weight: 500; font-family: 'Inter', sans-serif;">Apellido Paterno *</label>
+                                    <input type="text" id="apellidoP" class="form-control" required value="${worker?.apellido_p || ''}" style="width: 100%;">
                                 </div>
                                 <div class="form-group">
-                                    <label for="apellidoM">Apellido Materno</label>
-                                    <input type="text" id="apellidoM" class="form-control" value="${worker?.apellido_m || ''}">
+                                    <label for="apellidoM" style="display: block; margin-bottom: 0.5rem; font-weight: 500; font-family: 'Inter', sans-serif;">Apellido Materno</label>
+                                    <input type="text" id="apellidoM" class="form-control" value="${worker?.apellido_m || ''}" style="width: 100%;">
                                 </div>
                                 <div class="form-group">
-                                    <label for="rolNombre">Rol *</label>
-                                    <select id="rolNombre" class="form-control" required>
+                                    <label for="rolNombre" style="display: block; margin-bottom: 0.5rem; font-weight: 500; font-family: 'Inter', sans-serif;">Rol *</label>
+                                    <select id="rolNombre" class="form-control" required style="width: 100%;">
                                         <option value="recepcion" ${worker?.rol_nombre === 'recepcion' ? 'selected' : ''}>Recepción</option>
                                         <option value="mecanico" ${worker?.rol_nombre === 'mecanico' ? 'selected' : ''}>Mecánico</option>
                                         <option value="admin" ${worker?.rol_nombre === 'admin' ? 'selected' : ''}>Administrador</option>
                                     </select>
                                 </div>
                                 
-                                <div class="form-group full-width">
-                                    <label for="correo">Correo Electrónico *</label>
-                                    <input type="email" id="correo" class="form-control" required value="${worker?.correo || ''}">
+                                <div class="form-group full-width" style="grid-column: 1 / -1;">
+                                    <label for="correo" style="display: block; margin-bottom: 0.5rem; font-weight: 500; font-family: 'Inter', sans-serif;">Correo Electrónico *</label>
+                                    <input type="email" id="correo" class="form-control" required value="${worker?.correo || ''}" style="width: 100%;">
                                 </div>
-                                <div class="form-group full-width">
-                                    <label for="celular">Celular</label>
-                                    <input type="tel" id="celular" class="form-control" value="${worker?.celular || ''}">
+                                <div class="form-group full-width" style="grid-column: 1 / -1;">
+                                    <label for="celular" style="display: block; margin-bottom: 0.5rem; font-weight: 500; font-family: 'Inter', sans-serif;">Celular</label>
+                                    <input type="tel" id="celular" class="form-control" value="${worker?.celular || ''}" style="width: 100%;">
                                 </div>
 
-                                <div class="form-divider full-width">
-                                    <span>Seguridad</span>
+                                <div class="form-divider full-width" style="grid-column: 1 / -1; margin: 10px 0; border-bottom: 1px solid #eee;">
+                                    <span style="font-size: 0.9rem; color: #888; text-transform: uppercase; font-weight: bold;">Seguridad</span>
                                 </div>
 
                                 <div class="form-group">
-                                    <label for="password">${isEdit ? 'Nueva Contraseña (opcional)' : 'Contraseña *'}</label>
-                                    <input type="password" id="password" class="form-control" ${isEdit ? '' : 'required'} minlength="6">
+                                    <label for="password" style="display: block; margin-bottom: 0.5rem; font-weight: 500; font-family: 'Inter', sans-serif;">${isEdit ? 'Nueva Contraseña (opcional)' : 'Contraseña *'}</label>
+                                    <input type="password" id="password" class="form-control" ${isEdit ? '' : 'required'} minlength="6" style="width: 100%;">
                                     ${isEdit ? '<small class="text-secondary">Dejar en blanco para mantener la actual</small>' : ''}
                                 </div>
                                 <div class="form-group">
-                                    <label for="confirmPassword">Confirmar Contraseña</label>
-                                    <input type="password" id="confirmPassword" class="form-control" ${isEdit ? '' : 'required'} minlength="6">
+                                    <label for="confirmPassword" style="display: block; margin-bottom: 0.5rem; font-weight: 500; font-family: 'Inter', sans-serif;">Confirmar Contraseña</label>
+                                    <input type="password" id="confirmPassword" class="form-control" ${isEdit ? '' : 'required'} minlength="6" style="width: 100%;">
                                 </div>
                             </div>
                             
-                            <div class="modal-footer" style="margin-top: 20px;">
-                                <button type="button" class="btn-secondary modal-close-btn">Cancelar</button>
-                                <button type="submit" class="btn-primary">Guardar</button>
+                            <div class="modal-footer" style="margin-top: 20px; display: flex; justify-content: flex-end; gap: 10px;">
+                                <button type="button" class="btn-secondary modal-close-btn" style="margin-right: 0;">Cancelar</button>
+                                <button type="submit" class="btn-primary">
+                                    <i class="fas fa-save mr-2"></i> Guardar
+                                </button>
                             </div>
                         </form>
                     </div>
@@ -224,10 +249,10 @@ export default class WorkerView {
             });
         }
 
-        // Acciones en tarjetas (Delegación)
-        const grid = document.querySelector('.workers-grid');
-        if (grid) {
-            grid.addEventListener('click', (e) => {
+        // Acciones en tabla (Delegación)
+        const tableBody = document.getElementById('workersTableBody');
+        if (tableBody) {
+            tableBody.addEventListener('click', (e) => {
                 const btn = e.target.closest('button[data-action]');
                 if (btn) {
                     const action = btn.dataset.action;

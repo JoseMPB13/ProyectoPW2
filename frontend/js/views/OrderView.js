@@ -50,52 +50,62 @@ export default class OrderView {
     this.filteredOrders = orders;
 
     this.contentArea.innerHTML = `
-            <div class="orders-view">
+            <div class="card fade-in">
                 <!-- Header -->
-                <div class="view-header">
+                <div class="card-header d-flex justify-content-between align-items-center mb-4 border-bottom pb-3" style="background: transparent;">
                     <div>
-                        <h2>Gestión de Órdenes de Trabajo</h2>
-                        <p class="text-secondary">Administra y da seguimiento a las órdenes de servicio</p>
+                        <h2 class="h3 mb-1" style="font-family: 'Inter', sans-serif; font-weight: 700; color: #1e293b;">Gestión de Órdenes</h2>
+                        <p class="text-secondary small mb-0">Administra y da seguimiento a las órdenes de servicio</p>
                     </div>
-                    <button id="newOrderBtn" class="btn-primary">
-                        <span>+</span> Nueva Orden
-                    </button>
+                    <div class="d-flex gap-3 align-items-center">
+                         <div class="search-wrapper position-relative">
+                            <i class="fas fa-search position-absolute text-muted" style="left: 12px; top: 50%; transform: translateY(-50%); font-size: 0.9rem;"></i>
+                            <input 
+                                type="text" 
+                                id="searchOrders" 
+                                placeholder="Buscar..." 
+                                class="form-control pl-5"
+                                style="padding-left: 35px; border-radius: 8px; border: 1px solid #e2e8f0;"
+                            >
+                        </div>
+                        <button id="newOrderBtn" class="btn btn-primary d-flex align-items-center gap-2 px-4 shadow-sm" style="border-radius: 8px;">
+                            <i class="fas fa-plus"></i>
+                            <span>Nueva Orden</span>
+                        </button>
+                    </div>
                 </div>
 
-                <!-- Filters Bar -->
-                <div class="filters-bar">
-                    <div class="search-box">
-                        <input 
-                            type="text" 
-                            id="searchOrders" 
-                            placeholder="🔍 Buscar por placa, cliente o técnico..." 
-                            class="search-input"
-                        >
-                    </div>
-                    <div class="filter-group">
-                        <select id="filterEstado" class="filter-select">
+                <!-- Filters Bar (Secondary) -->
+                <div class="filters-bar mb-4 bg-light p-3 rounded border">
+                    <div class="d-flex align-items-center">
+                        <label for="filterEstado" class="mr-3 font-weight-500 text-secondary mb-0">Filtrar por Estado:</label>
+                        <select id="filterEstado" class="form-control" style="max-width: 200px;">
                             <option value="">Todos los estados</option>
                             <option value="Pendiente">Pendiente</option>
                             <option value="En Proceso">En Proceso</option>
                             <option value="Finalizado">Finalizado</option>
                             <option value="Entregado">Entregado</option>
                         </select>
-                        <button id="clearFilters" class="btn-secondary">Limpiar</button>
+                        <button id="clearFilters" class="btn btn-link text-secondary ml-3" style="text-decoration: none;">
+                            <i class="fas fa-undo-alt mr-1"></i> Limpiar
+                        </button>
                     </div>
                 </div>
 
                 <!-- Orders Grid -->
-                <div class="orders-grid" id="ordersGrid">
+                <div id="ordersGrid" class="services-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.5rem;">
                     ${this.renderOrderCards(orders)}
                 </div>
 
                 <!-- Pagination -->
-                ${this.renderPagination(pagination)}
+                <div class="mt-4 border-top pt-3">
+                    ${this.renderPagination(pagination)}
+                </div>
             </div>
         `;
 
     // Attach events to the newly created view root
-    const viewRoot = this.contentArea.querySelector(".orders-view");
+    const viewRoot = this.contentArea.querySelector(".card");
     if (viewRoot) {
       this.attachViewEvents(viewRoot);
     }
@@ -223,90 +233,115 @@ export default class OrderView {
     if (this.onSearch) this.onSearch("");
   }
 
-  // ... existing updateOrdersGrid ...
+    updateOrdersGrid() {
+        const grid = document.getElementById('ordersGrid');
+        if (grid) {
+            grid.innerHTML = this.renderOrderCards(this.filteredOrders);
+        }
+    }
 
   /**
    * Renderiza las tarjetas de órdenes.
    */
-  renderOrderCards(orders) {
-    if (!orders || orders.length === 0) {
-      return `
-                <div class="empty-state">
-                    <div class="empty-icon">📋</div>
-                    <h3>No hay órdenes registradas</h3>
-                    <p>Crea una nueva orden para comenzar</p>
-                    <button class="btn-primary" onclick="document.getElementById('newOrderBtn').click()">
-                        + Nueva Orden
+    /**
+     * Renderiza las tarjetas de órdenes.
+     */
+    /**
+     * Renderiza las tarjetas de órdenes estilo "Ticket Empresarial".
+     */
+    renderOrderCards(orders) {
+        if (!orders || orders.length === 0) {
+            return `
+                <div class="empty-state d-flex flex-column align-items-center justify-content-center py-5" style="grid-column: 1 / -1;">
+                    <div class="bg-light rounded-circle d-flex align-items-center justify-content-center mb-3" style="width: 80px; height: 80px;">
+                        <i class="fas fa-clipboard-list text-secondary fa-2x"></i>
+                    </div>
+                    <h4 class="text-dark font-weight-bold mb-2">No hay órdenes registradas</h4>
+                    <p class="text-secondary mb-4">Comienza creando una nueva orden de servicio</p>
+                    <button class="btn btn-primary px-4 py-2 shadow-sm rounded-pill transition-transform hover-scale" onclick="document.getElementById('newOrderBtn').click()">
+                        <i class="fas fa-plus mr-2"></i> Nueva Orden
                     </button>
                 </div>
             `;
-    }
+        }
 
-    return orders
-      .map(
-        (order) => `
-            <div class="order-card" data-id="${order.id}">
-                <div class="order-card-header">
-                    <div class="order-id">#${order.id}</div>
-                    <span class="badge badge-${this.getStatusClass(order.estado_nombre)}">
-                        ${order.estado_nombre || "Pendiente"}
-                    </span>
-                </div>
-                
-                <div class="order-card-body">
-                    <div class="order-info">
-                        <div class="info-row">
-                            <span class="icon">🚗</span>
-                            <div>
-                                <strong>${order.placa || "N/A"}</strong>
-                                <p class="text-secondary">${order.marca || ""} ${order.modelo || ""}</p>
-                            </div>
-                        </div>
-                        
-                        <div class="info-row">
-                            <span class="icon">👤</span>
-                            <div>
-                                <strong>${order.cliente_nombre || "Sin cliente"}</strong>
-                                <p class="text-secondary">Cliente</p>
-                            </div>
-                        </div>
-                        
-                        <div class="info-row">
-                            <span class="icon">🔧</span>
-                            <div>
-                                <strong>${order.tecnico_nombre || "Sin asignar"}</strong>
-                                <p class="text-secondary">Técnico</p>
-                            </div>
-                        </div>
-                        
-                        <div class="info-row">
-                            <span class="icon">📅</span>
-                            <div>
-                                <strong>${this.formatDate(order.fecha_ingreso)}</strong>
-                                <p class="text-secondary">Fecha de ingreso</p>
-                            </div>
-                        </div>
-                    </div>
+        return orders.map(order => {
+             // Status Badge Class Logic
+            let badgeClass = 'secondary';
+            const status = (order.estado_nombre || '').toLowerCase();
+            if (status.includes('finaliz') || status.includes('entregado') || status.includes('completado')) {
+                badgeClass = 'success';
+            } else if (status.includes('pendiente') || status.includes('proceso')) {
+                badgeClass = 'warning';
+            } else if (status.includes('cancel')) {
+                badgeClass = 'danger';
+            }
+
+            return `
+            <div class="order-card card bg-white border shadow-sm hover-shadow-md transition-all rounded-lg overflow-hidden h-100 d-flex flex-column" data-id="${order.id}">
+                <div class="card-body p-0 d-flex flex-column h-100">
                     
-                    <div class="order-total">
-                        <span class="total-label">Total Estimado</span>
-                        <span class="total-amount">Bs. ${this.formatCurrency(order.total_estimado)}</span>
+                    <!-- Card Header -->
+                    <div class="d-flex justify-content-between align-items-center p-3 border-bottom bg-light bg-opacity-50">
+                        <h3 class="h6 font-weight-bold text-dark mb-0">Orden #${order.id}</h3>
+                        <span class="badge badge-${badgeClass} px-2 py-1 rounded-pill small font-weight-bold text-uppercase" style="font-size: 0.7rem; letter-spacing: 0.5px;">
+                            ${order.estado_nombre || "Pendiente"}
+                        </span>
                     </div>
-                </div>
-                
-                <div class="order-card-footer">
-                    <button class="btn-outline" data-action="view" data-id="${order.id}">
-                        👁️ Ver Detalles
-                    </button>
-                    <button class="btn-primary-sm" data-action="edit" data-id="${order.id}">
-                        ✏️ Editar
-                    </button>
+
+                    <!-- Card Body Grid -->
+                    <div class="p-3 flex-grow-1">
+                        <div class="" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                            <!-- Vehicle -->
+                            <div class="d-flex align-items-start gap-2 mb-2 p-2 rounded hover-bg-light transition-colors" style="grid-column: 1 / -1;">
+                                <div class="mt-1 text-primary"><i class="fas fa-car"></i></div>
+                                <div>
+                                    <div class="font-weight-bold text-dark text-sm">${order.placa || "N/A"}</div>
+                                    <div class="text-xs text-secondary">${order.marca || "Marca"} ${order.modelo || ""}</div>
+                                </div>
+                            </div>
+                            
+                            <!-- Client -->
+                             <div class="d-flex align-items-center gap-2 mb-1">
+                                <i class="fas fa-user text-secondary text-xs" style="width: 16px; text-align: center;"></i>
+                                <span class="text-sm text-dark text-truncate" title="${order.cliente_nombre}">${order.cliente_nombre || "Sin Cliente"}</span>
+                            </div>
+
+                             <!-- Tech -->
+                             <div class="d-flex align-items-center gap-2 mb-1">
+                                <i class="fas fa-wrench text-secondary text-xs" style="width: 16px; text-align: center;"></i>
+                                <span class="text-sm text-secondary text-truncate">${order.tecnico_nombre ? order.tecnico_nombre.split(' ')[0] : "Sin Asig."}</span>
+                            </div>
+
+                             <!-- Date -->
+                             <div class="d-flex align-items-center gap-2" style="grid-column: 1 / -1;">
+                                <i class="fas fa-calendar-alt text-secondary text-xs" style="width: 16px; text-align: center;"></i>
+                                <span class="text-xs text-secondary">Ingreso: ${this.formatDate(order.fecha_ingreso).split(' ')[0]}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Card Footer -->
+                    <div class="d-flex justify-content-between align-items-center p-3 border-top mt-auto">
+                        <div class="font-weight-bold text-dark h6 mb-0">Bs. ${this.formatCurrency(order.total_estimado)}</div>
+                        
+                        <div class="d-flex gap-1">
+                             <button class="btn btn-icon btn-sm text-secondary hover-text-primary rounded-circle d-flex align-items-center justify-content-center" style="width: 32px; height: 32px; transition: all 0.2s;" data-action="view" data-id="${order.id}" title="Ver Detalle">
+                                 <i class="fas fa-eye"></i>
+                            </button>
+                            <button class="btn btn-icon btn-sm text-secondary hover-text-blue rounded-circle d-flex align-items-center justify-content-center" style="width: 32px; height: 32px; transition: all 0.2s;" data-action="edit" data-id="${order.id}" title="Editar">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                             <button class="btn btn-icon btn-sm text-secondary hover-text-success rounded-circle d-flex align-items-center justify-content-center btn-pay" style="width: 32px; height: 32px; transition: all 0.2s;" data-action="payment" data-id="${order.id}" title="Cobrar">
+                                <i class="fas fa-credit-card"></i>
+                            </button>
+                        </div>
+                    </div>
+
                 </div>
             </div>
-        `,
-      )
-      .join("");
-  }
+        `}).join("");
+    }
 
   /**
    * Renderiza la paginación.
@@ -315,26 +350,45 @@ export default class OrderView {
     if (!pagination || pagination.pages <= 1) return "";
 
     return `
-            <div class="pagination">
-                <button 
-                    id="prevPage" 
-                    class="btn-secondary" 
-                    ${pagination.current_page <= 1 ? "disabled" : ""}
-                >
-                    ← Anterior
-                </button>
-                <span class="page-info">
-                    Página ${pagination.current_page || 1} de ${pagination.pages || 1}
-                </span>
-                <button 
-                    id="nextPage" 
-                    class="btn-secondary"
-                    ${pagination.current_page >= pagination.pages ? "disabled" : ""}
-                >
-                    Siguiente →
-                </button>
-            </div>
-        `;
+        <div class="d-flex justify-content-center align-items-center mt-5">
+            <nav aria-label="Order pagination">
+                <ul class="pagination mb-0 gap-2 align-items-center" style="border: none; background: transparent;">
+                    <!-- Previous Button -->
+                    <li class="page-item ${pagination.current_page <= 1 ? "disabled" : ""}">
+                        <button 
+                            id="prevPage" 
+                            class="btn btn-light rounded-circle shadow-sm d-flex align-items-center justify-content-center" 
+                            style="width: 40px; height: 40px; border: 1px solid #e2e8f0;"
+                            ${pagination.current_page <= 1 ? "disabled" : ""}
+                            title="Anterior"
+                        >
+                            <i class="fas fa-chevron-left text-secondary" style="font-size: 0.8rem;"></i>
+                        </button>
+                    </li>
+
+                    <!-- Page Info -->
+                    <li class="page-item disabled mx-3">
+                        <span class="text-secondary font-weight-500 small">
+                            Página <span class="text-dark font-weight-bold">${pagination.current_page || 1}</span> de ${pagination.pages || 1}
+                        </span>
+                    </li>
+
+                    <!-- Next Button -->
+                    <li class="page-item ${pagination.current_page >= pagination.pages ? "disabled" : ""}">
+                        <button 
+                            id="nextPage" 
+                            class="btn btn-light rounded-circle shadow-sm d-flex align-items-center justify-content-center" 
+                            style="width: 40px; height: 40px; border: 1px solid #e2e8f0;"
+                            ${pagination.current_page >= pagination.pages ? "disabled" : ""}
+                            title="Siguiente"
+                        >
+                            <i class="fas fa-chevron-right text-secondary" style="font-size: 0.8rem;"></i>
+                        </button>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+    `;
   }
 
   /**
@@ -495,7 +549,7 @@ export default class OrderView {
                 <div class="modal-footer">
                     <button class="btn-secondary modal-close">Cerrar</button>
                     <button class="btn-primary" data-action="edit" data-id="${order.id}">
-                        ✏️ Editar Orden
+                        <i class="fas fa-edit mr-2"></i> Editar Orden
                     </button>
                 </div>
             </div>
@@ -521,25 +575,25 @@ export default class OrderView {
     if (isFinished && hasPendingBalance) {
       return `
         <div style="margin-top: 15px; padding: 10px; background: #f8f9fa; border-radius: 8px; text-align: center;">
-            <button class="btn-success-sm" data-action="payment" data-id="${order.id}" 
-                    style="width: 100%; justify-content: center; display: flex; align-items: center; padding: 12px; font-size: 1.1em;">
-              💰 Cobrar Bs. ${this.formatCurrency(saldo)}
+            <button class="btn btn-success" data-action="payment" data-id="${order.id}" 
+                    style="width: 100%; justify-content: center; display: flex; align-items: center; padding: 12px; font-size: 1.1em; border-radius: 8px;">
+              <i class="fas fa-credit-card mr-2"></i> Cobrar Bs. ${this.formatCurrency(saldo)}
             </button>
         </div>
       `;
     } else if (isFinished && !hasPendingBalance) {
       return `
         <div style="margin-top: 15px; text-align: center;">
-            <button disabled style="width: 100%; padding: 10px; background: #e9ecef; border: 1px solid #ced4da; border-radius: 5px; color: #28a745; font-weight: bold;">
-              ✅ Orden Pagada
+            <button disabled style="width: 100%; padding: 10px; background: #e9ecef; border: 1px solid #ced4da; border-radius: 5px; color: #28a745; font-weight: bold; display: flex; align-items: center; justify-content: center;">
+              <i class="fas fa-check-circle mr-2"></i> Orden Pagada
             </button>
         </div>
       `;
     } else {
         return `
         <div style="margin-top: 15px; text-align: center;">
-            <button disabled style="width: 100%; padding: 10px; background: #e9ecef; border: 1px solid #ced4da; border-radius: 5px; color: #6c757d;">
-              ⚠️ Finalizar orden para cobrar
+            <button disabled style="width: 100%; padding: 10px; background: #e9ecef; border: 1px solid #ced4da; border-radius: 5px; color: #6c757d; display: flex; align-items: center; justify-content: center;">
+              <i class="fas fa-exclamation-triangle mr-2"></i> Finalizar orden para cobrar
             </button>
         </div>
       `;
@@ -680,12 +734,12 @@ export default class OrderView {
                 </div>
                 
                 <form id="editOrderForm" class="modal-body">
-                    <div class="form-grid">
+                    <div class="form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
                         
                         <!-- Cliente -->
                         <div class="form-group">
-                            <label for="editOrderClient">Cliente *</label>
-                            <select id="editOrderClient" name="client_id" class="form-control" required>
+                            <label for="editOrderClient" style="display: block; margin-bottom: 0.5rem; font-weight: 500; font-family: 'Inter', sans-serif;">Cliente *</label>
+                            <select id="editOrderClient" name="client_id" class="form-control" required style="width: 100%;">
                                 <option value="">Seleccionar cliente...</option>
                                 ${(formData.clients || [])
                                   .map(
@@ -701,8 +755,8 @@ export default class OrderView {
 
                         <!-- Vehículo -->
                         <div class="form-group">
-                            <label for="editOrderAuto">Vehículo *</label>
-                            <select id="editOrderAuto" name="auto_id" class="form-control" required>
+                            <label for="editOrderAuto" style="display: block; margin-bottom: 0.5rem; font-weight: 500; font-family: 'Inter', sans-serif;">Vehículo *</label>
+                            <select id="editOrderAuto" name="auto_id" class="form-control" required style="width: 100%;">
                                 ${
                                   currentClientId
                                     ? (formData.vehicles || [])
@@ -722,8 +776,8 @@ export default class OrderView {
 
                         <!-- Técnico Asignado -->
                         <div class="form-group">
-                            <label for="editTecnico">Técnico Asignado *</label>
-                            <select id="editTecnico" name="tecnico_id" class="form-control" required>
+                            <label for="editTecnico" style="display: block; margin-bottom: 0.5rem; font-weight: 500; font-family: 'Inter', sans-serif;">Técnico Asignado *</label>
+                            <select id="editTecnico" name="tecnico_id" class="form-control" required style="width: 100%;">
                                 <option value="">Seleccionar técnico...</option>
                                 ${(formData.tecnicos || [])
                                   .map(
@@ -739,8 +793,8 @@ export default class OrderView {
 
                         <!-- Estado -->
                         <div class="form-group">
-                            <label for="editEstado">Estado *</label>
-                            <select id="editEstado" name="estado_id" class="form-control" required>
+                            <label for="editEstado" style="display: block; margin-bottom: 0.5rem; font-weight: 500; font-family: 'Inter', sans-serif;">Estado *</label>
+                            <select id="editEstado" name="estado_id" class="form-control" required style="width: 100%;">
                                 ${(formData.estados || [])
                                   .map(
                                     (e) => `
@@ -755,33 +809,35 @@ export default class OrderView {
 
                         <!-- Fechas -->
                         <div class="form-group">
-                            <label for="editFechaIngreso">Fecha de Ingreso</label>
+                            <label for="editFechaIngreso" style="display: block; margin-bottom: 0.5rem; font-weight: 500; font-family: 'Inter', sans-serif;">Fecha de Ingreso</label>
                             <input 
                                 type="datetime-local" 
                                 id="editFechaIngreso" 
                                 name="fecha_ingreso" 
                                 class="form-control"
                                 value="${order.fecha_ingreso ? order.fecha_ingreso.slice(0, 16) : ""}"
+                                style="width: 100%;"
                             >
                         </div>
 
 
                         <div class="form-group">
-                            <label for="editFechaEntrega">Fecha de Entrega/Salida</label>
+                            <label for="editFechaEntrega" style="display: block; margin-bottom: 0.5rem; font-weight: 500; font-family: 'Inter', sans-serif;">Fecha de Entrega/Salida</label>
                             <input 
                                 type="datetime-local" 
                                 id="editFechaEntrega" 
                                 name="fecha_entrega" 
                                 class="form-control"
                                 value="${order.fecha_entrega ? order.fecha_entrega.slice(0, 16) : ""}"
+                                style="width: 100%;"
                             >
                         </div>
                     </div>
 
                     <!-- Problema Reportado -->
-                    <div class="form-section" style="margin-top: 20px;">
-                        <div class="form-group full-width">
-                            <label for="editProblema">Problema Reportado</label>
+                    <div class="form-section mt-4">
+                        <div class="form-group full-width" style="grid-column: 1 / -1;">
+                            <label for="editProblema" style="display: block; margin-bottom: 0.5rem; font-weight: 500; font-family: 'Inter', sans-serif;">Problema Reportado</label>
                             <textarea 
                                 id="editProblema" 
                                 name="problema_reportado" 

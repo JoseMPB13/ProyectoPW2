@@ -4,52 +4,138 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Sistema Taller Mecánico</title>
+
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- FontAwesome Icons -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+      integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw=="
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    />
+
+    <!-- Custom Styles -->
     <link rel="stylesheet" href="css/styles.css" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" integrity="sha512-9usAa10IRO0HhonpyAIVpjrylPvoDwiPUiKdWk5t3PyolY1cOd4DSE0Ga+ri4AuTroPR5aQvXU9xC6qOPnzFeg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
   </head>
   <body>
     <div class="app-container">
       <!-- Sidebar Navigation -->
       <aside class="sidebar">
         <div class="sidebar-header">
-          <h2>Taller App</h2>
+          <h2><i class="fas fa-wrench mr-2"></i> Taller App</h2>
         </div>
         <nav class="sidebar-nav">
           <ul>
             <li>
-              <a href="#" class="active" data-view="dashboard">Dashboard</a>
+              <a href="#" class="active" data-view="dashboard">
+                <i class="fas fa-tachometer-alt"></i> Dashboard
+              </a>
             </li>
-            <li><a href="#" data-view="orders">Gestión de Órdenes</a></li>
-            <li><a href="#" data-view="services">Servicios</a></li>
-            <li><a href="#" data-view="inventory">Inventario</a></li>
-            <li><a href="#" data-view="trabajadores">Trabajadores</a></li>
-            <li><a href="#" data-view="clientes">Clientes</a></li>
-            <li><a href="#" data-view="vehicles">Autos</a></li>
-            <li><a href="#" data-view="pagos">Pagos</a></li>
+            <li>
+              <a href="#" data-view="orders">
+                <i class="fas fa-clipboard-list"></i> Gestión de Órdenes
+              </a>
+            </li>
+            <li>
+              <a href="#" data-view="services">
+                <i class="fas fa-tools"></i> Servicios
+              </a>
+            </li>
+            <li>
+              <a href="#" data-view="inventory">
+                <i class="fas fa-boxes"></i> Inventario
+              </a>
+            </li>
+            <li>
+              <a href="#" data-view="trabajadores">
+                <i class="fas fa-users-cog"></i> Trabajadores
+              </a>
+            </li>
+            <li>
+              <a href="#" data-view="clientes">
+                <i class="fas fa-user-friends"></i> Clientes
+              </a>
+            </li>
+            <li>
+              <a href="#" data-view="vehicles">
+                <i class="fas fa-car"></i> Autos
+              </a>
+            </li>
+            <li>
+              <a href="#" data-view="pagos">
+                <i class="fas fa-money-bill-wave"></i> Pagos
+              </a>
+            </li>
           </ul>
         </nav>
         <div class="sidebar-footer">
-          <button id="logoutBtn">Cerrar Sesión</button>
+          <button id="logoutBtn">
+            <i class="fas fa-sign-out-alt"></i> Cerrar Sesión
+          </button>
         </div>
       </aside>
 
       <!-- Main Content Area -->
       <main class="main-content">
         <header class="top-bar">
-          <h1>Dashboard</h1>
+          <h1 id="pageTitle">Dashboard</h1>
           <div class="user-info">
-            <span id="userName">Usuario</span>
+            <span id="userName" class="font-bold"
+              ><i class="fas fa-user-circle mr-1"></i> Usuario</span
+            >
           </div>
         </header>
 
         <div id="contentArea" class="content-area">
           <!-- El contenido dinámico se cargará aquí -->
-          <div class="card">
+          <div class="card text-center p-5">
+            <i class="fas fa-car-side fa-4x text-primary mb-3"></i>
             <h3>Bienvenido al Sistema</h3>
-            <p>Selecciona una opción del menú para comenzar.</p>
+            <p>
+              Selecciona una opción del menú para comenzar a gestionar tu
+              taller.
+            </p>
           </div>
         </div>
       </main>
+    </div>
+
+    <!-- Login Overlay (Hidden by default, managed by app.js) -->
+    <div id="loginOverlay" class="login-overlay hidden">
+      <div class="login-card">
+        <div class="text-center mb-4">
+          <i class="fas fa-wrench fa-3x text-primary"></i>
+          <h2 class="mt-2">Taller Mecánico</h2>
+          <p>Ingresa tus credenciales</p>
+        </div>
+        <form id="loginForm">
+          <div class="form-group">
+            <label>Usuario</label>
+            <input type="text" id="username" required placeholder="admin" />
+          </div>
+          <div class="form-group">
+            <label>Contraseña</label>
+            <input
+              type="password"
+              id="password"
+              required
+              placeholder="********"
+            />
+          </div>
+          <button type="submit" class="btn btn-primary w-100">
+            Iniciar Sesión
+          </button>
+          <p id="loginError" class="error-message hidden mt-3"></p>
+        </form>
+      </div>
     </div>
 
     <script type="module" src="js/app.js"></script>

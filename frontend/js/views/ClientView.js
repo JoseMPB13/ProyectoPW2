@@ -14,27 +14,47 @@ export default class ClientView {
     render(clients) {
         this.allClients = clients || [];
         this.appContent.innerHTML = `
-            <div class="view-header">
-                <h2>Gestión de Clientes</h2>
-                <button class="btn-primary" id="newClientBtn">+ Nuevo Cliente</button>
-            </div>
-            
-            <div class="split-view">
-                <!-- Panel Izquierdo: Lista -->
-                <div class="split-pane pane-list">
-                    <div class="search-bar p-3 border-bottom">
-                        <input type="text" id="clientSearchInput" placeholder="Buscar cliente..." class="form-control w-100">
+            <div class="card fade-in">
+                <!-- Header -->
+                <div class="card-header d-flex justify-content-between align-items-center mb-4 border-bottom pb-3" style="background: transparent;">
+                    <div>
+                        <h2 class="h3 mb-1" style="font-family: 'Inter', sans-serif; font-weight: 700; color: #1e293b;">Gestión de Clientes</h2>
+                        <p class="text-secondary small mb-0">Administra la información de tus clientes y sus vehículos</p>
                     </div>
-                    <div class="client-list" id="clientList">
-                        ${this._generateList(clients)}
+                    <div class="d-flex gap-3 align-items-center">
+                         <div class="search-wrapper position-relative">
+                            <i class="fas fa-search position-absolute text-muted" style="left: 12px; top: 50%; transform: translateY(-50%); font-size: 0.9rem;"></i>
+                            <input 
+                                type="text" 
+                                id="clientSearchInput" 
+                                placeholder="Buscar cliente..." 
+                                class="form-control pl-5"
+                                style="padding-left: 35px; border-radius: 8px; border: 1px solid #e2e8f0;"
+                            >
+                        </div>
+                        <button id="newClientBtn" class="btn btn-primary d-flex align-items-center gap-2 px-4 shadow-sm" style="border-radius: 8px;">
+                            <i class="fas fa-plus"></i>
+                            <span>Nuevo Cliente</span>
+                        </button>
                     </div>
                 </div>
 
-                <!-- Panel Derecho: Detalle -->
-                <div class="split-pane pane-detail" id="clientDetailPane">
-                    <div class="empty-state">
-                        <p class="text-secondary">Selecciona un cliente para ver sus detalles</p>
-                    </div>
+                <!-- Clients Table -->
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0" style="width: 100%;">
+                        <thead style="background-color: #F8FAFC; border-bottom: 2px solid #e2e8f0;">
+                            <tr>
+                                <th class="py-3 px-4 text-uppercase text-secondary text-xs font-weight-bold tracking-wide border-0">Cliente</th>
+                                <th class="py-3 px-4 text-uppercase text-secondary text-xs font-weight-bold tracking-wide border-0">CI / Identificación</th>
+                                <th class="py-3 px-4 text-uppercase text-secondary text-xs font-weight-bold tracking-wide border-0">Contacto</th>
+                                <th class="py-3 px-4 text-uppercase text-secondary text-xs font-weight-bold tracking-wide border-0 text-center">Vehículos</th>
+                                <th class="py-3 px-4 text-uppercase text-secondary text-xs font-weight-bold tracking-wide border-0 text-center">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="clientTableBody">
+                            ${this._generateTableRows(clients)}
+                        </tbody>
+                    </table>
                 </div>
             </div>
         `;
@@ -69,45 +89,49 @@ export default class ClientView {
             <div class="modal-content">
                 <div class="modal-header">
                     <h3>${isEdit ? 'Editar Cliente' : 'Nuevo Cliente'}</h3>
-                    <button class="modal-close">&times;</button>
+                    <button class="modal-close"><i class="fas fa-times"></i></button>
                 </div>
-                <form id="createClientForm" class="modal-body">
-                    ${isEdit ? `<input type="hidden" name="id" value="${clientToEdit.id}">` : ''}
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label>Nombre *</label>
-                            <input type="text" name="first_name" class="form-control" value="${isEdit ? clientToEdit.nombre || '' : ''}" required>
+                <div class="modal-body">
+                    <form id="createClientForm">
+                        ${isEdit ? `<input type="hidden" name="id" value="${clientToEdit.id}">` : ''}
+                        <div class="form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                            <div class="form-group">
+                                <label style="display: block; margin-bottom: 0.5rem; font-weight: 500; font-family: 'Inter', sans-serif;">Nombre *</label>
+                                <input type="text" name="first_name" class="form-control" value="${isEdit ? clientToEdit.nombre || '' : ''}" required style="width: 100%;">
+                            </div>
+                            <div class="form-group">
+                                <label style="display: block; margin-bottom: 0.5rem; font-weight: 500; font-family: 'Inter', sans-serif;">Apellido Paterno *</label>
+                                <input type="text" name="last_name" class="form-control" value="${isEdit ? clientToEdit.apellido_p || '' : ''}" required style="width: 100%;">
+                            </div>
+                            <div class="form-group">
+                                <label style="display: block; margin-bottom: 0.5rem; font-weight: 500; font-family: 'Inter', sans-serif;">Apellido Materno</label>
+                                <input type="text" name="apellido_m" class="form-control" value="${isEdit ? clientToEdit.apellido_m || '' : ''}" style="width: 100%;">
+                            </div>
+                            <div class="form-group">
+                                <label style="display: block; margin-bottom: 0.5rem; font-weight: 500; font-family: 'Inter', sans-serif;">CI (Cédula) *</label>
+                                <input type="text" name="ci" class="form-control" value="${isEdit ? clientToEdit.ci || '' : ''}" required style="width: 100%;">
+                            </div>
+                            <div class="form-group">
+                                <label style="display: block; margin-bottom: 0.5rem; font-weight: 500; font-family: 'Inter', sans-serif;">Email</label>
+                                <input type="email" name="email" class="form-control" value="${isEdit ? clientToEdit.correo || '' : ''}" style="width: 100%;">
+                            </div>
+                            <div class="form-group">
+                                <label style="display: block; margin-bottom: 0.5rem; font-weight: 500; font-family: 'Inter', sans-serif;">Celular</label>
+                                <input type="text" name="phone" class="form-control" value="${isEdit ? clientToEdit.celular || '' : ''}" style="width: 100%;">
+                            </div>
+                            <div class="form-group full-width" style="grid-column: 1 / -1;">
+                                <label style="display: block; margin-bottom: 0.5rem; font-weight: 500; font-family: 'Inter', sans-serif;">Dirección</label>
+                                <input type="text" name="address" class="form-control" value="${isEdit ? clientToEdit.direccion || '' : ''}" style="width: 100%;">
+                            </div>
                         </div>
-                        <div class="form-group">
-                            <label>Apellido Paterno *</label>
-                            <input type="text" name="last_name" class="form-control" value="${isEdit ? clientToEdit.apellido_p || '' : ''}" required>
-                        </div>
-                        <div class="form-group">
-                            <label>Apellido Materno</label>
-                            <input type="text" name="apellido_m" class="form-control" value="${isEdit ? clientToEdit.apellido_m || '' : ''}">
-                        </div>
-                        <div class="form-group">
-                            <label>CI (Cédula) *</label>
-                            <input type="text" name="ci" class="form-control" value="${isEdit ? clientToEdit.ci || '' : ''}" required>
-                        </div>
-                        <div class="form-group">
-                            <label>Email</label>
-                            <input type="email" name="email" class="form-control" value="${isEdit ? clientToEdit.correo || '' : ''}">
-                        </div>
-                        <div class="form-group">
-                            <label>Celular</label>
-                            <input type="text" name="phone" class="form-control" value="${isEdit ? clientToEdit.celular || '' : ''}">
-                        </div>
-                        <div class="form-group full-width">
-                            <label>Dirección</label>
-                            <input type="text" name="address" class="form-control" value="${isEdit ? clientToEdit.direccion || '' : ''}">
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn-secondary modal-close">Cancelar</button>
-                        <button type="submit" class="btn-primary">${isEdit ? 'Actualizar' : 'Guardar Cliente'}</button>
-                    </div>
-                </form>
+                    </form>
+                </div>
+                <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 10px;">
+                    <button type="button" class="btn-secondary modal-close" style="margin-right: 0;">Cancelar</button>
+                    <button type="submit" form="createClientForm" class="btn-primary">
+                        <i class="fas fa-save mr-2"></i> ${isEdit ? 'Actualizar' : 'Guardar Cliente'}
+                    </button>
+                </div>
             </div>
         `;
         document.body.appendChild(modal);
@@ -139,99 +163,161 @@ export default class ClientView {
     }
 
     updateClientList(clients) {
-        document.getElementById('clientList').innerHTML = this._generateList(clients);
-        this.bindListEvents();
+        document.getElementById('clientTableBody').innerHTML = this._generateTableRows(clients);
+        // Events are delegated in bindEvents, so no need to rebind per row
     }
 
-    _generateList(clients) {
-        if (!clients || clients.length === 0) return '<div class="p-3">No hay clientes.</div>';
+    _generateTableRows(clients) {
+        if (!clients || clients.length === 0) return '<tr><td colspan="5" class="text-center p-4 text-secondary">No hay clientes registrados.</td></tr>';
         
-        return clients.map(c => `
-            <div class="client-card" data-id="${c.id}">
-                <div class="client-avatar">${(c.nombre || '').charAt(0)}</div>
-                <div class="client-info">
-                    <h4>${c.nombre} ${c.apellido_p}</h4>
-                    <p>${c.correo}</p>
-                </div>
-            </div>
-        `).join('');
+        return clients.map(c => {
+             const vehicleCount = (c.autos && Array.isArray(c.autos)) ? c.autos.length : 0;
+            return `
+            <tr>
+                <td class="py-3 px-4 border-bottom">
+                    <div class="d-flex align-items-center">
+                        <div class="avatar-circle mr-3 bg-light text-primary font-weight-bold d-flex align-items-center justify-content-center rounded-circle" style="width: 36px; height: 36px;">
+                             ${(c.nombre || '').charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                            <div class="font-weight-bold text-dark" style="font-size: 0.95rem;">${c.nombre} ${c.apellido_p}</div>
+                            <div class="small text-secondary">ID: ${c.id}</div>
+                        </div>
+                    </div>
+                </td>
+                <td class="py-3 px-4 border-bottom text-dark font-weight-500">${c.ci || 'N/A'}</td>
+                <td class="py-3 px-4 border-bottom">
+                    <div class="d-flex flex-column">
+                        ${c.correo ? `<div class="small text-dark mb-1"><i class="far fa-envelope text-secondary mr-1"></i>${c.correo}</div>` : ''}
+                        ${c.celular ? `<div class="small text-dark"><i class="fas fa-phone-alt text-secondary mr-1"></i>${c.celular}</div>` : '<span class="text-muted">-</span>'}
+                    </div>
+                </td>
+                <td class="py-3 px-4 border-bottom text-center">
+                    <span class="badge badge-secondary rounded-pill px-3" style="background-color: #f1f5f9; color: #475569;">${vehicleCount} registrados</span>
+                </td>
+                 <td class="py-3 px-4 border-bottom text-center">
+                    <div class="btn-group" role="group">
+                        <button class="btn btn-sm btn-outline-primary mr-1 btn-view" data-id="${c.id}" title="Ver Detalles">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-secondary mr-1 btn-edit" data-id="${c.id}" title="Editar">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `}).join('');
     }
 
     /**
      * Renderiza el detalle del cliente en el panel derecho.
      */
+    /**
+     * Replaces the split-pane detail view with a Modal.
+     * Called by Controller when a client is selected.
+     */
     renderClientDetails(client) {
-        const pane = document.getElementById('clientDetailPane');
         const nombreCompleto = `${client.nombre} ${client.apellido_p} ${client.apellido_m || ''}`;
-        
-        // Contar vehículos del array autos
         const vehicleCount = (client.autos && Array.isArray(client.autos)) ? client.autos.length : 0;
-        
-        pane.innerHTML = `
-            <div class="detail-header">
-                <div class="client-avatar large">${(client.nombre || '').charAt(0)}</div>
-                <div>
-                    <h2>${nombreCompleto}</h2>
-                    <p class="text-secondary">ID: ${client.id} | CI: ${client.ci || 'N/A'}</p>
-                </div>
-            </div>
 
-            <div class="tabs">
-                <div class="tabs-header">
-                    <button class="tab-btn active" data-tab="info">Información</button>
-                    <button class="tab-btn" data-tab="vehicles">Vehículos (${vehicleCount})</button>
-                    <button class="tab-btn" data-tab="history">Historial</button>
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay open';
+        modal.id = 'clientDetailModal';
+        
+        modal.innerHTML = `
+            <div class="modal-content" style="max-width: 800px; width: 90%;">
+                <div class="modal-header border-bottom">
+                    <div class="d-flex align-items-center">
+                        <div class="avatar-circle mr-3 bg-primary text-white font-weight-bold d-flex align-items-center justify-content-center rounded-circle" style="width: 48px; height: 48px; font-size: 20px;">
+                             ${(client.nombre || '').charAt(0)}
+                        </div>
+                        <div>
+                            <h3 class="m-0">${nombreCompleto}</h3>
+                            <span class="text-secondary small">ID: ${client.id} | CI: ${client.ci || 'N/A'}</span>
+                        </div>
+                    </div>
+                    <button class="modal-close">&times;</button>
                 </div>
-                <div class="tabs-content">
-                    <div id="tab-info" class="tab-pane active">
-                        <div class="info-grid">
-                            <div class="info-item">
-                                <label>Email:</label>
-                                <span>${client.correo || '-'}</span>
-                            </div>
-                            <div class="info-item">
-                                <label>Celular:</label>
-                                <span>${client.celular || '-'}</span>
-                            </div>
-                            <div class="info-item">
-                                <label>Dirección:</label>
-                                <span>${client.direccion || '-'}</span>
-                            </div>
-                            <div class="info-item">
-                                <label>CI:</label>
-                                <span>${client.ci || '-'}</span>
-                            </div>
-                        </div>
-                        <div class="mt-4">
-                            <button class="btn-primary" id="btnEditClient" data-id="${client.id}">Editar Cliente</button>
+
+                <div class="modal-body p-0">
+                    <div class="tabs px-4 border-bottom bg-light">
+                        <div class="tabs-header d-flex gap-4">
+                            <button class="tab-btn active py-3 bg-transparent border-0 font-weight-bold text-primary border-bottom-2 border-primary" data-tab="info" style="border-bottom: 2px solid var(--primary-color);">Información</button>
+                            <button class="tab-btn py-3 bg-transparent border-0 text-secondary" data-tab="vehicles">Vehículos (${vehicleCount})</button>
+                            <button class="tab-btn py-3 bg-transparent border-0 text-secondary" data-tab="history">Historial</button>
                         </div>
                     </div>
-                    <div id="tab-vehicles" class="tab-pane">
-                        ${this._renderVehicles(client.autos)}
-                    </div>
-                    <div id="tab-history" class="tab-pane">
-                        <div id="clientHistoryContainer">
-                            <p class="p-4 text-center text-secondary">Cargando historial...</p>
+
+                    <div class="tabs-content p-4" style="min-height: 300px;">
+                        <!-- INFO TAB -->
+                        <div id="tab-info" class="tab-pane active">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="text-secondary small text-uppercase font-weight-bold">Email</label>
+                                    <div class="text-dark font-weight-500">${client.correo || '-'}</div>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="text-secondary small text-uppercase font-weight-bold">Celular</label>
+                                    <div class="text-dark font-weight-500">${client.celular || '-'}</div>
+                                </div>
+                                <div class="col-md-12 mb-3">
+                                    <label class="text-secondary small text-uppercase font-weight-bold">Dirección</label>
+                                    <div class="text-dark font-weight-500">${client.direccion || '-'}</div>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                   <label class="text-secondary small text-uppercase font-weight-bold">Cédula de Identidad</label>
+                                    <div class="text-dark font-weight-500">${client.ci || '-'}</div>
+                                </div>
+                            </div>
+                            <div class="mt-4 pt-4 border-top">
+                                <button class="btn btn-primary" id="btnEditClientFromModal" data-id="${client.id}">
+                                    <i class="fas fa-edit mr-2"></i> Editar Cliente
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- VEHICLES TAB -->
+                        <div id="tab-vehicles" class="tab-pane hidden" style="display: none;">
+                            ${this._renderVehicles(client.autos)}
+                        </div>
+
+                        <!-- HISTORY TAB -->
+                        <div id="tab-history" class="tab-pane hidden" style="display: none;">
+                            <div id="clientHistoryContainer">
+                                <p class="text-center text-secondary py-4"><i class="fas fa-spinner fa-spin mr-2"></i> Cargando historial...</p>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
         `;
         
-        this.bindTabEvents();
+        // Remove existing modal if any (though unlikely to overlap unless fast user)
+        const existing = document.getElementById('clientDetailModal');
+        if (existing) existing.remove();
 
-        // Bind Edit Button
-        const editBtn = document.getElementById('btnEditClient');
+        document.body.appendChild(modal);
+        
+        // Bind Events
+        this.bindTabEvents(modal);
+        modal.querySelector('.modal-close').onclick = () => modal.remove();
+
+        const editBtn = modal.querySelector('#btnEditClientFromModal');
         if (editBtn) {
             editBtn.addEventListener('click', () => {
-                if (this.onEditClient) this.onEditClient(client);
+                modal.remove(); // Close detail modal to show edit modal
+                if (this.onEditClient) this.onEditClient(client); // Or use showCreateModal direct? Better delegate.
+                // Wait, typically onEditClient calls the edit logic. 
+                // But in `render` I called `showCreateModal(client)`.
+                // I'll call `showCreateModal` directly here as well to save round trip if controller relies on view.
+                this.showCreateModal(client);
             });
         }
         
-        // Bind Vehicle Events
         this.bindVehicleEvents((action, id) => {
             if (this.onVehicleAction) this.onVehicleAction(action, client, id);
-        });
+        }, modal); // Pass modal context to search inside it
+
     }
 
     bindVehicleAction(handler) {
@@ -518,7 +604,7 @@ export default class ClientView {
                 <div class="vehicle-list">
                     ${autos.map(auto => `
                         <div class="vehicle-card d-flex align-items-center p-3 border rounded mb-2 shadow-sm">
-                            <div class="vehicle-icon mr-3" style="font-size: 1.5rem;">🚗</div>
+                            <div class="vehicle-icon mr-3" style="font-size: 1.5rem;"><i class="fas fa-car text-primary"></i></div>
                             <div class="vehicle-info flex-grow-1">
                                 <h4 class="mb-1">${auto.marca} ${auto.modelo}</h4>
                                 <p class="text-secondary mb-0 small">
@@ -528,7 +614,7 @@ export default class ClientView {
                                 </p>
                             </div>
                             <div class="vehicle-actions">
-                                <button class="btn-sm btn-secondary btn-edit-vehicle" data-id="${auto.id}" title="Editar">✏️</button>
+                                <button class="btn-sm btn-secondary btn-edit-vehicle" data-id="${auto.id}" title="Editar"><i class="fas fa-edit"></i></button>
                             </div>
                         </div>
                     `).join('')}
@@ -539,33 +625,67 @@ export default class ClientView {
 
 
     bindListEvents() {
-        const cards = document.querySelectorAll('.client-card');
-        cards.forEach(card => {
-            card.addEventListener('click', () => {
-                // Remove active from others
-                cards.forEach(c => c.classList.remove('active'));
-                card.classList.add('active');
-                
-                const id = card.getAttribute('data-id');
-                if (this.onSelectClient) this.onSelectClient(id);
+        // Updated to handle Table events (Delegate)
+        const tableBody = document.getElementById('clientTableBody');
+        if (tableBody) {
+            tableBody.addEventListener('click', (e) => {
+                // View Details
+                const viewBtn = e.target.closest('.btn-view');
+                if (viewBtn) {
+                    const id = viewBtn.dataset.id;
+                    if (this.onSelectClient) this.onSelectClient(id);
+                    return;
+                }
+
+                // Edit Client
+                const editBtn = e.target.closest('.btn-edit');
+                if (editBtn) {
+                    const id = editBtn.dataset.id;
+                    // Find client data to pass to handler if needed, or just ID.
+                    // Controller 'handleEditClient' usually needs the ID, or View might need to call internal show.
+                    // Let's assume onEditClient expects client object or ID. 
+                    // To be safe and consistent with OrderView pattern (action, id), we might need to adjust.
+                    // But ClientController likely expects `onEditClient` to trigger edit.
+                    // For now, let's find the client object from `this.allClients` to pass it, 
+                    // as `bindEditClient` in Line 279 inside modal uses `this.onEditClient(client)`.
+                    const client = this.allClients.find(c => c.id == id);
+                    if (this.onEditClient && client) this.onEditClient(client);
+                    else if (this.onEditClient) this.onEditClient(id); // Fallback
+                    return;
+                }
             });
-        });
+        }
     }
 
-    bindTabEvents() {
-        const buttons = document.querySelectorAll('.tab-btn');
-        const panes = document.querySelectorAll('.tabs-content .tab-pane');
+    bindTabEvents(context = document) {
+        const buttons = context.querySelectorAll('.tab-btn');
+        const panes = context.querySelectorAll('.tab-pane');
 
         buttons.forEach(btn => {
             btn.addEventListener('click', () => {
-                // Tabs
-                buttons.forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
+                // Update Buttons
+                buttons.forEach(b => {
+                    b.classList.remove('active', 'border-primary', 'font-weight-bold', 'text-primary'); 
+                    b.classList.add('text-secondary');
+                    b.style.borderBottom = 'none';
+                });
+                
+                btn.classList.add('active', 'font-weight-bold', 'text-primary');
+                btn.classList.remove('text-secondary');
+                btn.style.borderBottom = '2px solid var(--primary-color)';
 
-                // Content
+                // Update Content
                 const target = btn.getAttribute('data-tab');
                 panes.forEach(pane => {
-                    pane.id === `tab-${target}` ? pane.classList.add('active') : pane.classList.remove('active');
+                    if(pane.id === `tab-${target}`) {
+                        pane.style.display = 'block';
+                        pane.classList.remove('hidden');
+                        pane.classList.add('active');
+                    } else {
+                        pane.style.display = 'none';
+                        pane.classList.add('hidden');
+                        pane.classList.remove('active');
+                    }
                 });
             });
         });

@@ -18,27 +18,36 @@ export default class VehicleView {
     render(vehicles, clients = []) {
         this.clients = clients; // Store for modal
         this.appContent.innerHTML = `
-            <div class="view-header">
-                <h2>Gestión de Autos</h2>
-                <button class="btn-primary" id="newVehicleBtn"><i class="fas fa-plus"></i> Nuevo Vehículo</button>
-            </div>
+            <div class="card fade-in shadow-sm border-0 rounded-lg p-4">
+                <div class="view-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                    <div>
+                        <h2 style="font-family: 'Inter', sans-serif; font-weight: 600;">Gestión de Autos</h2>
+                        <p class="text-secondary">Administra la flota de vehículos registrados</p>
+                    </div>
+                    <div style="display: flex; gap: 1rem; align-items: center;">
+                        <button class="btn btn-primary" id="newVehicleBtn">
+                            <i class="fas fa-plus mr-2"></i> Nuevo Vehículo
+                        </button>
+                    </div>
+                </div>
             
-            <div class="card p-0 shadow-sm border-0" style="border-radius: 12px; overflow: hidden;">
-                <table class="table w-100 mb-0" style="border-collapse: separate; border-spacing: 0;">
-                    <thead class="bg-light">
-                        <tr>
-                            <th class="p-3 border-bottom text-secondary font-weight-bold">Placa</th>
-                            <th class="p-3 border-bottom text-secondary font-weight-bold">Vehículo</th>
-                            <th class="p-3 border-bottom text-secondary font-weight-bold">Cliente</th>
-                            <th class="p-3 border-bottom text-secondary font-weight-bold">Estado (Orden)</th>
-                            <th class="p-3 border-bottom text-secondary font-weight-bold">Ingreso</th>
-                            <th class="p-3 border-bottom text-secondary font-weight-bold text-center">Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${this._generateRows(vehicles)}
-                    </tbody>
-                </table>
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0 align-middle">
+                        <thead class="bg-light">
+                            <tr>
+                                <th class="py-3 px-4 border-bottom text-uppercase text-secondary text-xs font-weight-bold">Placa</th>
+                                <th class="py-3 px-4 border-bottom text-uppercase text-secondary text-xs font-weight-bold">Vehículo</th>
+                                <th class="py-3 px-4 border-bottom text-uppercase text-secondary text-xs font-weight-bold">Cliente</th>
+                                <th class="py-3 px-4 border-bottom text-uppercase text-secondary text-xs font-weight-bold text-center">Estado (Orden)</th>
+                                <th class="py-3 px-4 border-bottom text-uppercase text-secondary text-xs font-weight-bold">Ingreso</th>
+                                <th class="py-3 px-4 border-bottom text-uppercase text-secondary text-xs font-weight-bold text-center">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${this._generateRows(vehicles)}
+                        </tbody>
+                    </table>
+                </div>
             </div>
         `;
 
@@ -58,21 +67,21 @@ export default class VehicleView {
             const statusBadge = this._getStatusBadge(v.estado_nombre);
             
             return `
-                <tr class="hover-bg-light">
-                    <td class="p-3 border-bottom font-weight-bold text-primary">${v.placa || '-'}</td>
-                    <td class="p-3 border-bottom">
+                <tr>
+                    <td class="py-3 px-4 border-bottom font-weight-bold text-primary">${v.placa || '-'}</td>
+                    <td class="py-3 px-4 border-bottom">
                          <div class="font-weight-bold text-dark">${v.marca} ${v.modelo}</div>
                          <div class="text-secondary small">VIN: ${v.vin || 'N/A'}</div>
                     </td>
-                    <td class="p-3 border-bottom">
+                    <td class="py-3 px-4 border-bottom">
                         <div class="font-weight-bold text-dark">${clientName}</div>
                         <div class="text-secondary small">CI: ${v.client_ci || 'N/A'}</div>
                     </td>
-                    <td class="p-3 border-bottom">${statusBadge}</td>
-                    <td class="p-3 border-bottom text-secondary">${v.fecha_ingreso ? new Date(v.fecha_ingreso).toLocaleDateString() : '-'}</td>
-                    <td class="p-3 border-bottom text-center">
-                        <button class="btn-sm btn-icon btn-secondary view-btn" data-id="${v.id}" title="Ver"><i class="fas fa-eye"></i></button>
-                        <button class="btn-sm btn-icon btn-secondary edit-btn" data-id="${v.id}" title="Editar"><i class="fas fa-edit"></i></button>
+                    <td class="py-3 px-4 border-bottom text-center">${statusBadge}</td>
+                    <td class="py-3 px-4 border-bottom text-secondary">${v.fecha_ingreso ? new Date(v.fecha_ingreso).toLocaleDateString() : '-'}</td>
+                    <td class="py-3 px-4 border-bottom text-center">
+                        <button class="btn-icon btn-view view-btn" data-id="${v.id}" title="Ver"><i class="fas fa-eye"></i></button>
+                        <button class="btn-icon btn-edit edit-btn" data-id="${v.id}" title="Editar"><i class="fas fa-edit"></i></button>
                     </td>
                 </tr>
             `;
@@ -132,7 +141,7 @@ export default class VehicleView {
         ).join('');
 
         const formHTML = `
-            <form id="vehicleForm" class="modal-form p-4">
+            <form id="vehicleForm">
                 <input type="hidden" name="id" value="${isEdit ? vehicleToEdit.id : ''}">
                 <div class="form-grid">
                     ${!isEdit ? `
@@ -169,16 +178,29 @@ export default class VehicleView {
                         <input type="text" name="vin" class="form-control" value="${isEdit ? vehicleToEdit.vin || '' : ''}">
                     </div>
                 </div>
-                <div class="modal-actions d-flex justify-content-end mt-4">
-                     <button type="button" class="btn-secondary mr-2" id="cancelBtn">Cancelar</button>
-                    <button type="submit" class="btn-primary">${isEdit ? 'Actualizar' : 'Guardar'}</button>
-                </div>
             </form>
         `;
 
-        this.modal.open(isEdit ? 'Editar Vehículo' : 'Nuevo Vehículo', formHTML);
+        const footerHTML = `
+             <button type="button" class="btn-secondary modal-close-btn" id="cancelBtn">Cancelar</button>
+             <button type="submit" form="vehicleForm" class="btn-primary">${isEdit ? 'Actualizar' : 'Guardar'}</button>
+        `;
 
-        document.getElementById('cancelBtn').addEventListener('click', () => this.modal.close());
+        this.modal.open(isEdit ? 'Editar Vehículo' : 'Nuevo Vehículo', formHTML, footerHTML);
+
+        // Cancel button logic is handled by ModalView's close via class delegation? 
+        // ModalView binds .modal-close-btn to this.close(). 
+        // So adding class 'modal-close-btn' to Cancel button handles it automatically!
+        // But let's keep specific ID listener just in case or remove if redundant.
+        // ModalView implementation: 
+        // const closeBtn = overlay.querySelector('.modal-close-btn'); -> only selects ONE (the header X usually).
+        // I should verify ModalView if it selects ALL or just one.
+        // Reading ModalView again: `const closeBtn = overlay.querySelector('.modal-close-btn');` -> Single Element.
+        // So I must manually bind cancel button logic or update ModalView to selectAll.
+        // I'll manually bind for safety here.
+        
+        const cancelBtn = document.getElementById('cancelBtn');
+        if(cancelBtn) cancelBtn.addEventListener('click', () => this.modal.close());
 
         document.getElementById('vehicleForm').onsubmit = (e) => {
             e.preventDefault();
@@ -202,7 +224,7 @@ export default class VehicleView {
          const content = `
             <div class="p-4">
                 <div class="mb-4 text-center">
-                    <div style="font-size: 3rem;">🚗</div>
+                    <div class="text-primary mb-2"><i class="fas fa-car fa-4x"></i></div>
                     <h3>${vehicle.marca} ${vehicle.modelo}</h3>
                     <h5 class="text-secondary">${vehicle.placa}</h5>
                 </div>

@@ -37,7 +37,7 @@ export default class DashboardView {
                     <!-- Card 1: Total Órdenes del Mes -->
                     <div class="card kpi-card">
                         <div class="kpi-icon bg-blue">
-                            <span class="icon">📋</span>
+                            <span class="icon"><i class="fas fa-clipboard-list text-white"></i></span>
                         </div>
                         <div class="kpi-info">
                             <h3>Órdenes del Mes</h3>
@@ -49,7 +49,7 @@ export default class DashboardView {
                     <!-- Card 2: Ingresos Estimados -->
                     <div class="card kpi-card">
                         <div class="kpi-icon bg-green">
-                            <span class="icon">💰</span>
+                            <span class="icon"><i class="fas fa-coins text-white"></i></span>
                         </div>
                         <div class="kpi-info">
                             <h3>Ingresos Estimados</h3>
@@ -61,7 +61,7 @@ export default class DashboardView {
                     <!-- Card 3: Órdenes Pendientes -->
                     <div class="card kpi-card">
                         <div class="kpi-icon bg-yellow">
-                            <span class="icon">⏳</span>
+                            <span class="icon"><i class="fas fa-hourglass-half text-white"></i></span>
                         </div>
                         <div class="kpi-info">
                             <h3>Pendientes</h3>
@@ -73,7 +73,7 @@ export default class DashboardView {
                     <!-- Card 4: En Proceso -->
                     <div class="card kpi-card">
                         <div class="kpi-icon bg-purple">
-                            <span class="icon">🔧</span>
+                            <span class="icon"><i class="fas fa-tools text-white"></i></span>
                         </div>
                         <div class="kpi-info">
                             <h3>En Proceso</h3>
@@ -99,19 +99,19 @@ export default class DashboardView {
                     <h3>Acciones Rápidas</h3>
                     <div class="actions-grid">
                         <button class="action-btn" data-view="orders">
-                            <span class="action-icon">➕</span>
+                            <span class="action-icon"><i class="fas fa-plus"></i></span>
                             <span>Nueva Orden</span>
                         </button>
                         <button class="action-btn" data-view="clientes">
-                            <span class="action-icon">👤</span>
+                            <span class="action-icon"><i class="fas fa-user-plus"></i></span>
                             <span>Nuevo Cliente</span>
                         </button>
                         <button class="action-btn" data-view="vehicles">
-                            <span class="action-icon">🚗</span>
+                            <span class="action-icon"><i class="fas fa-car"></i></span>
                             <span>Nuevo Auto</span>
                         </button>
                         <button class="action-btn" data-view="pagos">
-                            <span class="action-icon">💳</span>
+                            <span class="action-icon"><i class="fas fa-credit-card"></i></span>
                             <span>Registrar Pago</span>
                         </button>
                     </div>

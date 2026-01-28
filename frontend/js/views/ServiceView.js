@@ -7,18 +7,22 @@ export default class ServiceView {
 
     render(services = []) {
         this.contentArea.innerHTML = `
-            <div class="view-header">
-                <div>
-                    <h2>Gestión de Servicios</h2>
-                    <p class="text-secondary">Administra los servicios ofrecidos por el taller</p>
+            <div class="card fade-in shadow-sm border-0 rounded-lg p-4">
+                <div class="view-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                    <div>
+                        <h2 style="font-family: 'Inter', sans-serif; font-weight: 600;">Gestión de Servicios</h2>
+                        <p class="text-secondary">Administra los servicios ofrecidos por el taller</p>
+                    </div>
+                    <div style="display: flex; gap: 1rem; align-items: center;">
+                        <button id="btnNewService" class="btn btn-primary">
+                            <i class="fas fa-plus mr-2"></i> Nuevo Servicio
+                        </button>
+                    </div>
                 </div>
-                <button id="btnNewService" class="btn-primary">
-                    <span>+</span> Nuevo Servicio
-                </button>
-            </div>
 
-            <div class="services-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; margin-top: 20px;">
-                ${this.renderServiceCards(services)}
+                <div class="services-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 1.5rem;">
+                    ${this.renderServiceCards(services)}
+                </div>
             </div>
         `;
 
@@ -29,7 +33,7 @@ export default class ServiceView {
         if (!services.length) {
             return `
                 <div class="empty-state" style="grid-column: 1 / -1; text-align: center; padding: 40px;">
-                    <div style="font-size: 48px; margin-bottom: 10px;">🛠️</div>
+                    <div style="font-size: 48px; margin-bottom: 10px;"><i class="fas fa-tools text-secondary"></i></div>
                     <h3>No hay servicios registrados</h3>
                     <p>Crea el primer servicio para comenzar.</p>
                 </div>
@@ -37,23 +41,27 @@ export default class ServiceView {
         }
 
         return services.map(service => `
-            <div class="card service-card" style="display: flex; flex-direction: column; justify-content: space-between; height: 100%;">
-                <div>
-                    <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 10px;">
-                        <h3 style="margin: 0; color: var(--text-color);">${service.nombre}</h3>
-                        <span class="badge badge-success">Bs. ${parseFloat(service.precio).toFixed(2)}</span>
+            <div class="card border rounded-lg overflow-hidden h-100 shadow-sm hover-shadow transition-all">
+                <div class="p-4">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                         <div class="icon-circle bg-light text-primary rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                            <i class="fas fa-cogs"></i>
+                        </div>
+                        <span class="badge badge-success px-3 py-1 rounded-pill">Bs. ${parseFloat(service.precio).toFixed(2)}</span>
                     </div>
-                    <p class="text-secondary" style="margin-bottom: 15px;">
+                    <h3 class="h5 font-weight-bold mb-2 text-dark">${service.nombre}</h3>
+                    <p class="text-secondary small mb-4" style="min-height: 40px;">
                         ${service.descripcion || 'Sin descripción'}
                     </p>
-                </div>
-                <div class="card-actions" style="border-top: 1px solid var(--border-color); padding-top: 15px; margin-top: 10px; display: flex; gap: 10px;">
-                    <button class="btn-secondary btn-sm" data-action="edit" data-id="${service.id}" style="flex: 1;">
-                        ✏️ Editar
-                    </button>
-                    <button class="btn-danger btn-sm" data-action="delete" data-id="${service.id}" style="flex: 1;">
-                        🗑️ Eliminar
-                    </button>
+                    
+                    <div class="d-flex gap-2 border-top pt-3">
+                        <button class="btn-icon btn-edit flex-fill" data-action="edit" data-id="${service.id}" title="Editar">
+                             <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn-icon btn-delete flex-fill text-danger" data-action="delete" data-id="${service.id}" title="Eliminar">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
+                    </div>
                 </div>
             </div>
         `).join('');
@@ -82,28 +90,32 @@ export default class ServiceView {
             <div class="modal-content">
                 <div class="modal-header">
                     <h3>${isEdit ? 'Editar Servicio' : 'Nuevo Servicio'}</h3>
-                    <button class="modal-close">&times;</button>
+                    <button class="modal-close"><i class="fas fa-times"></i></button>
                 </div>
-                <form id="serviceForm" class="modal-body">
-                    <div class="form-group">
-                        <label for="nombre">Nombre del Servicio *</label>
-                        <input type="text" id="nombre" name="nombre" class="form-control" 
-                               value="${service ? service.nombre : ''}" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="precio">Precio (Bs.) *</label>
-                        <input type="number" id="precio" name="precio" class="form-control" step="0.01" 
-                               value="${service ? service.precio : ''}" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="descripcion">Descripción</label>
-                        <textarea id="descripcion" name="descripcion" class="form-control" rows="3">${service ? service.descripcion || '' : ''}</textarea>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn-secondary modal-close">Cancelar</button>
-                        <button type="submit" class="btn-primary">Guardar</button>
-                    </div>
-                </form>
+                <div class="modal-body">
+                    <form id="serviceForm">
+                        <div class="form-grid">
+                            <div class="form-group full-width">
+                                <label for="nombre">Nombre del Servicio *</label>
+                                <input type="text" id="nombre" name="nombre" class="form-control" 
+                                       value="${service ? service.nombre : ''}" required>
+                            </div>
+                            <div class="form-group full-width">
+                                <label for="precio">Precio Base (Bs.) *</label>
+                                <input type="number" id="precio" name="precio" class="form-control" step="0.01" 
+                                       value="${service ? service.precio : ''}" required>
+                            </div>
+                            <div class="form-group full-width">
+                                <label for="descripcion">Descripción</label>
+                                <textarea id="descripcion" name="descripcion" class="form-control" rows="3">${service ? service.descripcion || '' : ''}</textarea>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-secondary modal-close">Cancelar</button>
+                    <button type="submit" form="serviceForm" class="btn-primary">Guardar</button>
+                </div>
             </div>
         `;
 
