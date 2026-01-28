@@ -105,14 +105,18 @@ export default class OrderController {
             const order = await this.model.getOrderById(id);
             
             // Cargar datos para los dropdowns
-            const [tecnicos, estados] = await Promise.all([
+            const [tecnicos, estados, servicios, repuestos] = await Promise.all([
                 this.loadTecnicos(),
-                this.loadEstados()
+                this.loadEstados(),
+                this.loadServicios(),
+                this.loadRepuestos()
             ]);
 
             this.view.showEditModal(order, {
                 tecnicos,
-                estados
+                estados,
+                servicios,
+                repuestos
             });
         } catch (error) {
             console.error('Error al cargar datos para edición:', error);
@@ -253,12 +257,32 @@ export default class OrderController {
             return response || [];
         } catch (error) {
             console.error('Error al cargar estados:', error);
-            return [
-                { id: 1, nombre_estado: 'Pendiente' },
-                { id: 2, nombre_estado: 'En Proceso' },
-                { id: 3, nombre_estado: 'Finalizado' },
-                { id: 4, nombre_estado: 'Entregado' }
-            ];
+            return [];
+        }
+    }
+    /**
+     * Carga la lista de servicios.
+     */
+    async loadServicios() {
+        try {
+            const response = await this.api.get('/services');
+            return response.items || response || [];
+        } catch (error) {
+            console.error('Error al cargar servicios:', error);
+            return [];
+        }
+    }
+
+    /**
+     * Carga la lista de repuestos.
+     */
+    async loadRepuestos() {
+        try {
+            const response = await this.api.get('/inventory/parts'); // Verifying route name...
+            return response.items || response || [];
+        } catch (error) {
+            console.error('Error al cargar repuestos:', error);
+            return [];
         }
     }
 

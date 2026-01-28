@@ -571,19 +571,6 @@ export default class OrderView {
                                 value="${order.fecha_entrega ? order.fecha_entrega.slice(0, 16) : ''}"
                             >
                         </div>
-
-                        <!-- Total Estimado -->
-                        <div class="form-group">
-                            <label for="editTotal">Total Estimado</label>
-                            <input 
-                                type="number" 
-                                id="editTotal" 
-                                name="total_estimado" 
-                                class="form-control"
-                                step="0.01"
-                                value="${order.total_estimado || 0}"
-                            >
-                        </div>
                     </div>
 
                     <!-- Problema Reportado -->
@@ -614,6 +601,18 @@ export default class OrderView {
                             >${order.diagnostico || ''}</textarea>
                         </div>
                     </div>
+
+                    <!-- Secciones Dinámicas -->
+                    ${this.renderServicesTable(data.servicios || [], order.detalles_servicios || [])}
+                    ${this.renderPartsTable(data.repuestos || [], order.detalles_repuestos || [])}
+
+                    <!-- Total (Pie) -->
+                    <div class="form-group mt-4" style="text-align: right;">
+                        <label for="editTotal" style="font-size: 1.2em; font-weight: bold;">Total Estimado: </label>
+                        <input type="number" id="editTotal" name="total_estimado" class="form-control" 
+                               style="display: inline-block; width: 150px; font-size: 1.2em; font-weight: bold; text-align: right;"
+                               step="0.01" value="${order.total_estimado || 0}" readonly>
+                    </div>
                 </form>
                 
                 <div class="modal-footer">
@@ -627,6 +626,7 @@ export default class OrderView {
 
         document.body.appendChild(modal);
         this.attachModalEvents(modal);
+        this.attachDetailsLogic(modal, data.servicios || [], data.repuestos || []);
         this.attachFormEvents(modal, order.id);
     }
 
@@ -741,7 +741,37 @@ export default class OrderView {
         if (form) {
             form.addEventListener('submit', (e) => {
                 e.preventDefault();
-                
+
+                // Recolectar Servicios
+                const servicios = [];
+                modal.querySelectorAll('#servicesTableBody tr').forEach(row => {
+                    const select = row.querySelector('.service-select');
+                    const price = row.querySelector('.service-price');
+                    if (select && select.value) {
+                        servicios.push({
+                            servicio_id: parseInt(select.value),
+                            precio_aplicado: parseFloat(price.value)
+                        });
+                    }
+                });
+
+                // Recolectar Repuestos
+                const repuestos = [];
+                modal.querySelectorAll('#partsTableBody tr').forEach(row => {
+                    const select = row.querySelector('.part-select');
+                    const qty = row.querySelector('.part-qty');
+                    const selectOption = select.options[select.selectedIndex];
+                    const price = parseFloat(selectOption.getAttribute('data-price') || 0);
+
+                    if (select && select.value) {
+                        repuestos.push({
+                            repuesto_id: parseInt(select.value),
+                            cantidad: parseInt(qty.value),
+                            precio_unitario_aplicado: price
+                        });
+                    }
+                });
+
                 const formData = {
                     tecnico_id: form.tecnico_id.value,
                     estado_id: form.estado_id.value,
@@ -749,7 +779,9 @@ export default class OrderView {
                     problema_reportado: form.problema_reportado.value,
                     fecha_ingreso: form.fecha_ingreso.value || null,
                     fecha_entrega: form.fecha_entrega.value || null,
-                    total_estimado: form.total_estimado.value ? parseFloat(form.total_estimado.value) : 0
+                    total_estimado: form.total_estimado.value ? parseFloat(form.total_estimado.value) : 0,
+                    servicios: servicios,
+                    repuestos: repuestos
                 };
 
                 if (this.onSubmitEdit) {
@@ -867,12 +899,6 @@ export default class OrderView {
                             <label for="newOrderFechaEntrega">Fecha Estimada de Entrega</label>
                             <input type="date" id="newOrderFechaEntrega" name="fecha_entrega" class="form-control">
                         </div>
-
-                        <!-- Total Estimado -->
-                        <div class="form-group">
-                            <label for="newOrderTotal">Total Estimado (Ref.)</label>
-                            <input type="number" id="newOrderTotal" name="total_estimado" class="form-control" step="0.01" placeholder="0.00">
-                        </div>
                     </div>
 
                     <!-- Problema -->
@@ -883,12 +909,24 @@ export default class OrderView {
                                 id="newOrderProblema" 
                                 name="problema_reportado" 
                                 class="form-control" 
-                                rows="4"
-                                placeholder="Describa detalladamente el problema reportado por el cliente..."
+                                rows="3"
+                                placeholder="Describa detalladamente el problema..."
                                 required
-                                style="width: 100%; min-height: 100px;"
+                                style="width: 100%;"
                             ></textarea>
                         </div>
+                    </div>
+
+                    <!-- Secciones Dinámicas -->
+                    ${this.renderServicesTable(data.servicios || [])}
+                    ${this.renderPartsTable(data.repuestos || [])}
+
+                    <!-- Total (Pie) -->
+                    <div class="form-group mt-4" style="text-align: right;">
+                        <label for="newOrderTotal" style="font-size: 1.2em; font-weight: bold;">Total Estimado: </label>
+                        <input type="number" id="newOrderTotal" name="total_estimado" class="form-control" 
+                               style="display: inline-block; width: 150px; font-size: 1.2em; font-weight: bold; text-align: right;"
+                               step="0.01" value="0.00" readonly>
                     </div>
                 </form>
                 
@@ -904,11 +942,228 @@ export default class OrderView {
         document.body.appendChild(modal);
         this.attachModalEvents(modal);
         this.attachNewOrderFormLogic(modal, data.vehicles);
+        this.attachDetailsLogic(modal, data.servicios || [], data.repuestos || []);
     }
 
     /**
-     * Adjunta la lógica dinámica al formulario de nueva orden.
+     * Genera el HTML para la sección de servicios dinámicos.
      */
+    renderServicesTable(allServices, currentDetails = []) {
+        const rows = currentDetails.map((detail, index) => {
+            return this.getServiceRowHTML(allServices, detail, index);
+        }).join('');
+
+        return `
+            <div class="details-section mt-3">
+                <h4>Servicios</h4>
+                <div class="table-container">
+                    <table class="table table-sm" id="servicesTable">
+                        <thead>
+                            <tr>
+                                <th style="width: 60%">Servicio</th>
+                                <th style="width: 30%">Precio</th>
+                                <th style="width: 10%">Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody id="servicesTableBody">
+                            ${rows}
+                        </tbody>
+                    </table>
+                </div>
+                <button type="button" class="btn-small btn-secondary" id="btnAddService">
+                    + Agregar Servicio
+                </button>
+            </div>
+        `;
+    }
+
+    /**
+     * Genera el HTML de una fila de servicio.
+     */
+    getServiceRowHTML(allServices, detail = null, index = Date.now()) {
+        const selectedId = detail ? (detail.servicio_id || detail.service_id) : '';
+        const price = detail ? (detail.precio_aplicado || 0) : 0;
+        
+        return `
+            <tr class="service-row" data-index="${index}">
+                <td>
+                    <select class="form-control service-select" name="servicios[${index}][servicio_id]" required>
+                        <option value="">Seleccionar Servicio...</option>
+                        ${allServices.map(s => `
+                            <option value="${s.id}" data-price="${s.precio}" ${s.id == selectedId ? 'selected' : ''}>
+                                ${s.nombre}
+                            </option>
+                        `).join('')}
+                    </select>
+                </td>
+                <td>
+                    <input type="number" class="form-control service-price" name="servicios[${index}][precio_aplicado]" 
+                           value="${parseFloat(price).toFixed(2)}" step="0.01" readonly>
+                </td>
+                <td>
+                    <button type="button" class="btn-icon danger remove-row">&times;</button>
+                </td>
+            </tr>
+        `;
+    }
+
+    /**
+     * Genera el HTML para la sección de repuestos dinámicos.
+     */
+    renderPartsTable(allParts, currentDetails = []) {
+        const rows = currentDetails.map((detail, index) => {
+            return this.getPartRowHTML(allParts, detail, index);
+        }).join('');
+
+        return `
+            <div class="details-section mt-3">
+                <h4>Repuestos</h4>
+                <div class="table-container">
+                    <table class="table table-sm" id="partsTable">
+                        <thead>
+                            <tr>
+                                <th style="width: 50%">Repuesto</th>
+                                <th style="width: 15%">Cant.</th>
+                                <th style="width: 25%">Subtotal</th>
+                                <th style="width: 10%">Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody id="partsTableBody">
+                            ${rows}
+                        </tbody>
+                    </table>
+                </div>
+                <button type="button" class="btn-small btn-secondary" id="btnAddPart">
+                    + Agregar Repuesto
+                </button>
+            </div>
+        `;
+    }
+
+    /**
+     * Genera el HTML de una fila de repuesto.
+     */
+    getPartRowHTML(allParts, detail = null, index = Date.now()) {
+        const selectedId = detail ? (detail.repuesto_id || detail.part_id) : '';
+        const quantity = detail ? (detail.cantidad || 1) : 1;
+        const price = detail ? (detail.precio_unitario_aplicado || 0) : 0;
+        const subtotal = price * quantity;
+
+        return `
+            <tr class="part-row" data-index="${index}">
+                <td>
+                    <select class="form-control part-select" name="repuestos[${index}][repuesto_id]" required>
+                        <option value="">Seleccionar Repuesto...</option>
+                        ${allParts.map(p => `
+                            <option value="${p.id}" data-price="${p.precio_venta}" data-stock="${p.stock}" ${p.id == selectedId ? 'selected' : ''}>
+                                ${p.nombre} (Stock: ${p.stock})
+                            </option>
+                        `).join('')}
+                    </select>
+                </td>
+                <td>
+                    <input type="number" class="form-control part-qty" name="repuestos[${index}][cantidad]" 
+                           value="${quantity}" min="1" required>
+                </td>
+                <td>
+                    <input type="number" class="form-control part-subtotal" 
+                           value="${parseFloat(subtotal).toFixed(2)}" readonly>
+                </td>
+                <td>
+                    <button type="button" class="btn-icon danger remove-row">&times;</button>
+                </td>
+            </tr>
+        `;
+    }
+
+    /**
+     * Adjunta la lógica dinámica a tablas de servicios y repuestos.
+     */
+    attachDetailsLogic(modal, allServices, allParts) {
+        // SERVICIOS
+        const btnAddService = modal.querySelector('#btnAddService');
+        const servicesBody = modal.querySelector('#servicesTableBody');
+
+        btnAddService.addEventListener('click', () => {
+            const rowHTML = this.getServiceRowHTML(allServices, null, Date.now());
+            servicesBody.insertAdjacentHTML('beforeend', rowHTML);
+            this.calculateTotal(modal);
+        });
+
+        servicesBody.addEventListener('change', (e) => {
+            if (e.target.classList.contains('service-select')) {
+                const option = e.target.options[e.target.selectedIndex];
+                const price = option.getAttribute('data-price') || 0;
+                const row = e.target.closest('tr');
+                row.querySelector('.service-price').value = parseFloat(price).toFixed(2);
+                this.calculateTotal(modal);
+            }
+        });
+
+        servicesBody.addEventListener('click', (e) => {
+            if (e.target.classList.contains('remove-row')) {
+                e.target.closest('tr').remove();
+                this.calculateTotal(modal);
+            }
+        });
+
+        // REPUESTOS
+        const btnAddPart = modal.querySelector('#btnAddPart');
+        const partsBody = modal.querySelector('#partsTableBody');
+
+        btnAddPart.addEventListener('click', () => {
+            const rowHTML = this.getPartRowHTML(allParts, null, Date.now());
+            partsBody.insertAdjacentHTML('beforeend', rowHTML);
+            this.calculateTotal(modal);
+        });
+
+        partsBody.addEventListener('change', (e) => {
+            const row = e.target.closest('tr');
+            if (!row) return;
+
+            if (e.target.classList.contains('part-select') || e.target.classList.contains('part-qty')) {
+                const select = row.querySelector('.part-select');
+                const qtyInput = row.querySelector('.part-qty');
+                const subtotalInput = row.querySelector('.part-subtotal');
+
+                const option = select.options[select.selectedIndex];
+                const price = parseFloat(option ? option.getAttribute('data-price') : 0) || 0;
+                const qty = parseInt(qtyInput.value) || 0;
+
+                subtotalInput.value = (price * qty).toFixed(2);
+                this.calculateTotal(modal);
+            }
+        });
+
+         partsBody.addEventListener('click', (e) => {
+            if (e.target.classList.contains('remove-row')) {
+                e.target.closest('tr').remove();
+                this.calculateTotal(modal);
+            }
+        });
+    }
+
+    /**
+     * Calcula y actualiza el total estimado en el modal.
+     */
+    calculateTotal(modal) {
+        let total = 0;
+
+        // Sumar servicios
+        modal.querySelectorAll('.service-price').forEach(input => {
+            total += parseFloat(input.value) || 0;
+        });
+
+        // Sumar repuestos
+        modal.querySelectorAll('.part-subtotal').forEach(input => {
+            total += parseFloat(input.value) || 0;
+        });
+
+        const totalInput = modal.querySelector('input[name="total_estimado"]');
+        if (totalInput) {
+            totalInput.value = total.toFixed(2);
+        }
+    }
     attachNewOrderFormLogic(modal, vehicles) {
         const form = modal.querySelector('#newOrderForm');
         const clientSelect = form.querySelector('#newOrderClient');
@@ -951,13 +1206,45 @@ export default class OrderView {
          form.addEventListener('submit', (e) => {
             e.preventDefault();
             
+            // Recolectar Servicios
+            const servicios = [];
+            modal.querySelectorAll('#servicesTableBody tr').forEach(row => {
+               const select = row.querySelector('.service-select');
+               const price = row.querySelector('.service-price');
+               if(select && select.value) {
+                   servicios.push({
+                       servicio_id: parseInt(select.value),
+                       precio_aplicado: parseFloat(price.value)
+                   });
+               }
+            });
+
+            // Recolectar Repuestos
+            const repuestos = [];
+             modal.querySelectorAll('#partsTableBody tr').forEach(row => {
+               const select = row.querySelector('.part-select');
+               const qty = row.querySelector('.part-qty');
+               const selectOption = select.options[select.selectedIndex];
+               const price = parseFloat(selectOption.getAttribute('data-price') || 0);
+
+               if(select && select.value) {
+                   repuestos.push({
+                       repuesto_id: parseInt(select.value),
+                       cantidad: parseInt(qty.value),
+                       precio_unitario_aplicado: price
+                   });
+               }
+            });
+
             const formData = {
                 auto_id: form.auto_id.value,
                 tecnico_id: form.tecnico_id.value,
                 problema_reportado: form.problema_reportado.value,
                 estado_id: form.estado_id.value || 1,
                 fecha_entrega: form.fecha_entrega.value || null,
-                total_estimado: form.total_estimado.value ? parseFloat(form.total_estimado.value) : 0
+                total_estimado: form.total_estimado.value ? parseFloat(form.total_estimado.value) : 0,
+                servicios: servicios,
+                repuestos: repuestos
             };
 
             if (this.onSubmitNewOrder) {
