@@ -78,11 +78,13 @@ def login():
         JSON: Token de acceso y datos del usuario.
     """
     data = request.get_json()
+    print(f"DEBUG: Login Attempt: {data}", flush=True)
 
     if not data or not data.get('email') or not data.get('password'):
         return jsonify({"msg": "Faltan credenciales"}), 400
 
     result = AuthService.login_user(data['email'], data['password'])
+    print(f"DEBUG: Login Result: {result is not None}", flush=True)
 
     if not result:
         return jsonify({"msg": "Credenciales inválidas"}), 401

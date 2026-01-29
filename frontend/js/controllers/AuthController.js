@@ -25,27 +25,49 @@ export default class AuthController {
      */
     async handleLogin(email, password) {
         try {
+            // DEBUG: Alertar inicio
+            // alert(`Intentando login con: ${email}`);
+            
             const response = await this.model.login(email, password);
             
+            // DEBUG: Ver respuesta
+            // alert('Respuesta recibida: ' + JSON.stringify(response));
+
             // Asumiendo que la respuesta exitosa trae { access_token, user, ... }
             if (response && response.access_token) {
+                console.log('Login successful:', response);
+                
                 // Guardar en localStorage
                 localStorage.setItem('token', response.access_token);
+                
+                // Validar almacenamiento
+                if (!localStorage.getItem('token')) {
+                     alert('ERROR CRITICO: No se pudo guardar el token en localStorage.');
+                     return;
+                }
+
                 // Si el backend devuelve info del user, guardarla también
                 if (response.user) {
                     localStorage.setItem('user', JSON.stringify(response.user));
                 }
 
+                alert('Login Exitoso! Redirigiendo...');
+
                 // Ocultar login y notificar éxito a la App principal
                 this.view.hideLogin();
+                
+                // NO recargar, dejar que la SPA fluya para ver si carga el dashboard
                 if (this.onLoginSuccess) this.onLoginSuccess();
             } else {
+                console.error('Login response invalid:', response);
+                alert('Error: Respuesta del servidor inválida\n' + JSON.stringify(response));
                 this.view.showError('Respuesta inesperada del servidor.');
             }
         } catch (error) {
             console.error('Login error:', error);
-            // Mostrar error amigable
-            const msg = error.message || 'Error al iniciar sesión. Verifique credenciales.';
+            // Mostrar error amigable con detalle técnico en alert
+            const msg = error.message || 'Error desconocido';
+            alert('Error de Conexión/Login:\n' + msg);
             this.view.showError(msg);
         }
     }

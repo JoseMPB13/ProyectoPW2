@@ -18,29 +18,50 @@ export default class AuthView {
         this.loginContainer = document.createElement('div');
         this.loginContainer.id = 'loginContainer';
         this.loginContainer.className = 'login-overlay hidden';
+        this.loginContainer.style.zIndex = '9999'; // Force top
         
         this.loginContainer.innerHTML = `
-            <div class="login-card">
+            <div class="login-card" style="pointer-events: auto;">
                 <div class="login-header">
                     <h2>Bienvenido</h2>
                     <p>Inicia sesión para continuar</p>
                 </div>
-                <form id="loginForm">
+                <form id="loginForm" onsubmit="event.preventDefault();">
                     <div class="form-group">
-                        <label for="email">Correo Electrónico</label>
-                        <input type="email" id="email" required placeholder="admin@example.com">
+                        <label for="login_email">Correo Electrónico</label>
+                        <input type="email" id="login_email" required placeholder="admin@example.com" autocomplete="email">
                     </div>
                     <div class="form-group">
-                        <label for="password">Contraseña</label>
-                        <input type="password" id="password" required placeholder="••••••">
+                        <label for="login_password">Contraseña</label>
+                        <input type="password" id="login_password" required placeholder="••••••" autocomplete="current-password">
                     </div>
                     <div id="loginError" class="error-message hidden"></div>
-                    <button type="submit" class="btn-primary w-100">Ingresar</button>
+                    <button type="submit" class="btn-primary w-100 mb-2">Ingresar</button>
+                    <button type="button" id="testConnectionA" class="btn-secondary w-100" style="background-color: #6c757d; margin-top: 10px;">Test Conexión</button>
                 </form>
             </div>
         `;
 
         document.body.appendChild(this.loginContainer);
+        
+        // Bind Test Connection
+        setTimeout(() => {
+            const btn = document.getElementById('testConnectionA');
+            if(btn) {
+                btn.onclick = async () => {
+                    btn.textContent = 'Probando...';
+                    try {
+                        const res = await fetch('http://127.0.0.1:5000/health');
+                        const data = await res.json();
+                        alert('CONEXIÓN EXITOSA:\n' + JSON.stringify(data));
+                    } catch (e) {
+                        alert('FALLO CONEXIÓN:\n' + e.message + '\n\nAsegúrate que el backend corre en http://127.0.0.1:5000');
+                    } finally {
+                        btn.textContent = 'Test Conexión';
+                    }
+                };
+            }
+        }, 500);
     }
 
     /**
@@ -83,15 +104,37 @@ export default class AuthView {
      * @param {Function} handler - Función a ejecutar al enviar (recibe email, password).
      */
     bindLogin(handler) {
-        const form = document.getElementById('loginForm');
-        form.addEventListener('submit', (event) => {
-            event.preventDefault();
-            this.clearError();
-            
-            const email = document.getElementById('email').value;
-            const password = document.getElementById('password').value;
+        // Usar el botón directamente para evitar recargas accidentales del form
+        const btn = this.loginContainer.querySelector('button[type="submit"]');
+        if (btn) {
+            btn.type = 'button'; // Cambiar a button normal
+            btn.onclick = async (e) => {
+                e.preventDefault(); // Por si acaso
+                this.clearError();
+                
+                const email = document.getElementById('login_email').value;
+                const password = document.getElementById('login_password').value;
 
-            handler(email, password);
-        });
+                if (!email || !password) {
+                    alert('Por favor ingrese correo y contraseña.');
+                    return;
+                }
+
+                // UI Feedback
+                const originalText = btn.textContent;
+                btn.textContent = 'Enviando...';
+                btn.disabled = true;
+
+                try {
+                    await handler(email, password);
+                } catch (err) {
+                    console.error(err);
+                    alert('Error en handler: ' + err.message);
+                } finally {
+                    btn.textContent = originalText;
+                    btn.disabled = false;
+                }
+            };
+        }
     }
 }

@@ -154,7 +154,7 @@ class AuthService:
                 raise ValueError(f"El rol '{data['rol_nombre']}' no existe")
             user.rol_id = rol_obj.id
         if 'password' in data:
-            user.password_hash = generate_password_hash(data['password'])
+            user.password = generate_password_hash(data['password'])
         
         db.session.commit()
         return user
