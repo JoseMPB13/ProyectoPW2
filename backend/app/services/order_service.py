@@ -1,6 +1,7 @@
 from app import db
 from app.models import Orden, OrdenDetalleServicio, OrdenDetalleRepuesto, Servicio, Repuesto, Auto, Usuario
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy import func
 
 class OrderService:
     """
@@ -343,14 +344,49 @@ class OrderService:
     @staticmethod
     def _recalculate_order_total(order):
         """
-        Recalcula el total estimado de una orden.
-        
-        Args:
-            order (Orden): Instancia de la orden
+        Recalcula el total estimado de una orden usando consultas directas a la BD
+        para asegurar que se incluyan los cambios recientes (flush).
         """
-        total_servicios = sum(d.precio_aplicado for d in order.detalles_servicios)
-        total_repuestos = sum(d.precio_unitario_aplicado * d.cantidad for d in order.detalles_repuestos)
-        order.total_estimado = total_servicios + total_repuestos
+        # Sumar servicios
+        total_servicios = db.session.query(db.func.sum(OrdenDetalleServicio.precio_aplicado))\
+            .filter_by(orden_id=order.id).scalar() or 0.0
+            
+        # Sumar repuestos (precio * cantidad)
+        total_repuestos = db.session.query(db.func.sum(OrdenDetalleRepuesto.precio_unitario_aplicado * OrdenDetalleRepuesto.cantidad))\
+            .filter_by(orden_id=order.id).scalar() or 0.0
+            
+        order.total_estimado = float(total_servicios) + float(total_repuestos)
+
+    @staticmethod
+    def recalculate_all_totals():
+        """
+        Recalcula los totales de TODAS las órdenes activas.
+        Retorna estadísticas de correcciones.
+        """
+        orders = Orden.query.filter_by(activo=True).all()
+        count = 0
+        corrected = 0
+        
+        for order in orders:
+            old_total = order.total_estimado or 0.0
+            
+            # Sumar servicios
+            total_servicios = db.session.query(func.sum(OrdenDetalleServicio.precio_aplicado))\
+                .filter_by(orden_id=order.id).scalar() or 0.0
+                
+            # Sumar repuestos (precio * cantidad)
+            total_repuestos = db.session.query(func.sum(OrdenDetalleRepuesto.precio_unitario_aplicado * OrdenDetalleRepuesto.cantidad))\
+                .filter_by(orden_id=order.id).scalar() or 0.0
+                
+            order.total_estimado = float(total_servicios) + float(total_repuestos)
+            
+            if abs(old_total - order.total_estimado) > 0.01:
+                corrected += 1
+                
+            count += 1
+            
+        db.session.commit()
+        return {"total": count, "corrected": corrected}
 
     # ==============================================================================
     # MÉTODOS DE CONSULTA

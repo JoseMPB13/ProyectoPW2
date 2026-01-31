@@ -18,7 +18,7 @@ export default class ClientView {
                 <!-- Header -->
                 <div class="card-header d-flex justify-content-between align-items-center mb-4 border-bottom pb-3" style="background: transparent;">
                     <div>
-                        <h2 class="h3 mb-1" style="font-family: 'Inter', sans-serif; font-weight: 700; color: #1e293b;">Gestión de Clientes</h2>
+                        <h2 class="h3 mb-1 font-weight-bold text-main">Gestión de Clientes</h2>
                         <p class="text-secondary small mb-0">Administra la información de tus clientes y sus vehículos</p>
                     </div>
                     <div class="d-flex gap-3 align-items-center">
@@ -32,7 +32,7 @@ export default class ClientView {
                                 style="padding-left: 35px; border-radius: 8px; border: 1px solid #e2e8f0;"
                             >
                         </div>
-                        <button id="newClientBtn" class="btn btn-primary d-flex align-items-center gap-2 px-4 shadow-sm" style="border-radius: 8px;">
+                        <button id="newClientBtn" class="btn btn-success text-white d-flex align-items-center gap-2 px-4 shadow-sm" style="border-radius: 8px;">
                             <i class="fas fa-plus"></i>
                             <span>Nuevo Cliente</span>
                         </button>
@@ -42,7 +42,7 @@ export default class ClientView {
                 <!-- Clients Table -->
                 <div class="table-responsive">
                     <table class="table table-hover align-middle mb-0" style="width: 100%;">
-                        <thead style="background-color: #F8FAFC; border-bottom: 2px solid #e2e8f0;">
+                        <thead class="bg-light border-bottom">
                             <tr>
                                 <th class="py-3 px-4 text-uppercase text-secondary text-xs font-weight-bold tracking-wide border-0">Cliente</th>
                                 <th class="py-3 px-4 text-uppercase text-secondary text-xs font-weight-bold tracking-wide border-0">CI / Identificación</th>
@@ -60,7 +60,7 @@ export default class ClientView {
         `;
 
         this.bindListEvents();
-        this.bindListEvents();
+
         // this.bindSearchEvent(); // Removed internal binding calls from render if they are to be called by controller, 
         // but wait, render calls it internally. I should probably leave the call in render but rename it or separate it.
         // Actually, the controller `init` calls `bindSearch` usually.
@@ -68,7 +68,7 @@ export default class ClientView {
         // But `ClientView.render` was calling `bindSearchEvent` internally.
         // I will REMOVE `this.bindSearchEvent()` from `render` and let Controller call `bindSearch`.
 
-        
+
         document.getElementById('newClientBtn').addEventListener('click', () => this.showCreateModal());
     }
 
@@ -80,7 +80,7 @@ export default class ClientView {
             });
         }
     }
-    
+
     showCreateModal(clientToEdit = null) {
         const isEdit = !!clientToEdit;
         const modal = document.createElement('div');
@@ -96,40 +96,42 @@ export default class ClientView {
                         ${isEdit ? `<input type="hidden" name="id" value="${clientToEdit.id}">` : ''}
                         <div class="form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
                             <div class="form-group">
-                                <label style="display: block; margin-bottom: 0.5rem; font-weight: 500; font-family: 'Inter', sans-serif;">Nombre *</label>
+                                <label class="form-label text-dark font-weight-bold">Nombre *</label>
                                 <input type="text" name="first_name" class="form-control" value="${isEdit ? clientToEdit.nombre || '' : ''}" required style="width: 100%;">
                             </div>
                             <div class="form-group">
-                                <label style="display: block; margin-bottom: 0.5rem; font-weight: 500; font-family: 'Inter', sans-serif;">Apellido Paterno *</label>
+                                <label class="form-label text-dark font-weight-bold">Apellido Paterno *</label>
                                 <input type="text" name="last_name" class="form-control" value="${isEdit ? clientToEdit.apellido_p || '' : ''}" required style="width: 100%;">
                             </div>
                             <div class="form-group">
-                                <label style="display: block; margin-bottom: 0.5rem; font-weight: 500; font-family: 'Inter', sans-serif;">Apellido Materno</label>
+                                <label class="form-label text-dark font-weight-bold">Apellido Materno</label>
                                 <input type="text" name="apellido_m" class="form-control" value="${isEdit ? clientToEdit.apellido_m || '' : ''}" style="width: 100%;">
                             </div>
                             <div class="form-group">
-                                <label style="display: block; margin-bottom: 0.5rem; font-weight: 500; font-family: 'Inter', sans-serif;">CI (Cédula) *</label>
+                                <label class="form-label text-dark font-weight-bold">CI (Cédula) *</label>
                                 <input type="text" name="ci" class="form-control" value="${isEdit ? clientToEdit.ci || '' : ''}" required style="width: 100%;">
                             </div>
                             <div class="form-group">
-                                <label style="display: block; margin-bottom: 0.5rem; font-weight: 500; font-family: 'Inter', sans-serif;">Email</label>
+                                <label class="form-label text-dark font-weight-bold">Email</label>
                                 <input type="email" name="email" class="form-control" value="${isEdit ? clientToEdit.correo || '' : ''}" style="width: 100%;">
                             </div>
                             <div class="form-group">
-                                <label style="display: block; margin-bottom: 0.5rem; font-weight: 500; font-family: 'Inter', sans-serif;">Celular</label>
+                                <label class="form-label text-dark font-weight-bold">Celular</label>
                                 <input type="text" name="phone" class="form-control" value="${isEdit ? clientToEdit.celular || '' : ''}" style="width: 100%;">
                             </div>
                             <div class="form-group full-width" style="grid-column: 1 / -1;">
-                                <label style="display: block; margin-bottom: 0.5rem; font-weight: 500; font-family: 'Inter', sans-serif;">Dirección</label>
+                                <label class="form-label text-dark font-weight-bold">Dirección</label>
                                 <input type="text" name="address" class="form-control" value="${isEdit ? clientToEdit.direccion || '' : ''}" style="width: 100%;">
                             </div>
                         </div>
                     </form>
                 </div>
-                <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 10px;">
-                    <button type="button" class="btn-secondary modal-close" style="margin-right: 0;">Cancelar</button>
-                    <button type="submit" form="createClientForm" class="btn-primary">
-                        <i class="fas fa-save mr-2"></i> ${isEdit ? 'Actualizar' : 'Guardar Cliente'}
+                <div class="modal-footer d-flex justify-content-between align-items-center bg-light border-top-0">
+                    <button type="button" class="btn btn-danger rounded-pill px-4 shadow-sm modal-close" style="height: 45px; display: flex; align-items: center; justify-content: center; background-color: #ef4444; border-color: #ef4444; color: white; font-size: 0.95rem; font-weight: 700;">
+                        <i class="fas fa-times me-2"></i> Cancelar
+                    </button>
+                    <button type="submit" form="createClientForm" class="btn btn-primary rounded-pill px-4 shadow-sm" style="height: 45px; display: flex; align-items: center; justify-content: center; background-color: #4f46e5; border-color: #4f46e5; font-size: 0.95rem; font-weight: 700;">
+                        <i class="fas fa-save me-2"></i> ${isEdit ? 'Actualizar' : 'Guardar Cliente'}
                     </button>
                 </div>
             </div>
@@ -144,7 +146,7 @@ export default class ClientView {
             e.preventDefault();
             const formData = new FormData(e.target);
             const data = Object.fromEntries(formData.entries());
-            
+
             if (isEdit) {
                 if (this.onUpdateClient) this.onUpdateClient(data.id, data);
             } else {
@@ -169,31 +171,31 @@ export default class ClientView {
 
     _generateTableRows(clients) {
         if (!clients || clients.length === 0) return '<tr><td colspan="5" class="text-center p-4 text-secondary">No hay clientes registrados.</td></tr>';
-        
+
         return clients.map(c => {
-             const vehicleCount = (c.autos && Array.isArray(c.autos)) ? c.autos.length : 0;
+            const vehicleCount = (c.autos && Array.isArray(c.autos)) ? c.autos.length : 0;
             return `
             <tr>
                 <td class="py-3 px-4 border-bottom">
                     <div class="d-flex align-items-center">
-                        <div class="avatar-circle mr-3 bg-light text-primary font-weight-bold d-flex align-items-center justify-content-center rounded-circle" style="width: 36px; height: 36px;">
+                        <div class="avatar-circle mr-3 bg-white text-primary font-weight-bold d-flex align-items-center justify-content-center rounded-circle shadow-sm" style="width: 36px; height: 36px;">
                              ${(c.nombre || '').charAt(0).toUpperCase()}
                         </div>
                         <div>
-                            <div class="font-weight-bold text-dark" style="font-size: 0.95rem;">${c.nombre} ${c.apellido_p}</div>
+                            <div class="font-weight-bold text-main" style="font-size: 0.95rem;">${c.nombre} ${c.apellido_p}</div>
                             <div class="small text-secondary">ID: ${c.id}</div>
                         </div>
                     </div>
                 </td>
-                <td class="py-3 px-4 border-bottom text-dark font-weight-500">${c.ci || 'N/A'}</td>
+                <td class="py-3 px-4 border-bottom text-main font-weight-500">${c.ci || 'N/A'}</td>
                 <td class="py-3 px-4 border-bottom">
                     <div class="d-flex flex-column">
-                        ${c.correo ? `<div class="small text-dark mb-1"><i class="far fa-envelope text-secondary mr-1"></i>${c.correo}</div>` : ''}
-                        ${c.celular ? `<div class="small text-dark"><i class="fas fa-phone-alt text-secondary mr-1"></i>${c.celular}</div>` : '<span class="text-muted">-</span>'}
+                        ${c.correo ? `<div class="small text-main mb-1"><i class="far fa-envelope text-secondary mr-1"></i>${c.correo}</div>` : ''}
+                        ${c.celular ? `<div class="small text-main"><i class="fas fa-phone-alt text-secondary mr-1"></i>${c.celular}</div>` : '<span class="text-muted">-</span>'}
                     </div>
                 </td>
                 <td class="py-3 px-4 border-bottom text-center">
-                    <span class="badge badge-secondary rounded-pill px-3" style="background-color: #f1f5f9; color: #475569;">${vehicleCount} registrados</span>
+                    <span class="badge badge-secondary rounded-pill px-3">${vehicleCount} registrados</span>
                 </td>
                  <td class="py-3 px-4 border-bottom text-center">
                     <div class="btn-group" role="group">
@@ -223,7 +225,7 @@ export default class ClientView {
         const modal = document.createElement('div');
         modal.className = 'modal-overlay open';
         modal.id = 'clientDetailModal';
-        
+
         modal.innerHTML = `
             <div class="modal-content" style="max-width: 800px; width: 90%;">
                 <div class="modal-header border-bottom">
@@ -291,13 +293,13 @@ export default class ClientView {
                 </div>
             </div>
         `;
-        
+
         // Remove existing modal if any (though unlikely to overlap unless fast user)
         const existing = document.getElementById('clientDetailModal');
         if (existing) existing.remove();
 
         document.body.appendChild(modal);
-        
+
         // Bind Events
         this.bindTabEvents(modal);
         modal.querySelector('.modal-close').onclick = () => modal.remove();
@@ -306,14 +308,10 @@ export default class ClientView {
         if (editBtn) {
             editBtn.addEventListener('click', () => {
                 modal.remove(); // Close detail modal to show edit modal
-                if (this.onEditClient) this.onEditClient(client); // Or use showCreateModal direct? Better delegate.
-                // Wait, typically onEditClient calls the edit logic. 
-                // But in `render` I called `showCreateModal(client)`.
-                // I'll call `showCreateModal` directly here as well to save round trip if controller relies on view.
-                this.showCreateModal(client);
+                if (this.onEditClient) this.onEditClient(client);
             });
         }
-        
+
         this.bindVehicleEvents((action, id) => {
             if (this.onVehicleAction) this.onVehicleAction(action, client, id);
         }, modal); // Pass modal context to search inside it
@@ -354,11 +352,13 @@ export default class ClientView {
                                     <div class="font-weight-bold">${o.marca || ''} ${o.modelo || ''}</div>
                                     <div class="text-secondary small">${o.placa || 'Sin Placa'}</div>
                                 </td>
-                                <td class="p-3 text-center"><span class="badge ${this._getStatusClass(o.estado_nombre)} px-3 py-2">${o.estado_nombre || 'Desconocido'}</span></td>
-                                <td class="p-3 text-center">${o.fecha_ingreso ? new Date(o.fecha_ingreso).toLocaleDateString() : '-'}</td>
-                                <td class="p-3 font-weight-bold text-center">$${(o.total_estimado || 0).toFixed(2)}</td>
+                                <td class="p-3 text-center"><span class="badge-status ${this._getStatusClass(o.estado_nombre)}">${o.estado_nombre || 'Desconocido'}</span></td>
+                                <td class="p-3 text-center text-dark">${o.fecha_ingreso ? new Date(o.fecha_ingreso).toLocaleDateString() : '-'}</td>
+                                <td class="p-3 font-weight-bold text-center text-dark">Bs. ${(o.total_estimado || 0).toFixed(2)}</td>
                                 <td class="p-3 text-center">
-                                    <button class="btn-sm btn-secondary view-order-btn" data-id="${o.id}">Ver</button>
+                                    <button class="btn btn-sm btn-outline-primary rounded-pill px-3 view-order-btn" data-id="${o.id}">
+                                        <i class="fas fa-eye mr-1"></i> Ver
+                                    </button>
                                 </td>
                             </tr>
                         `).join('')}
@@ -391,21 +391,21 @@ export default class ClientView {
                 <div class="modal-header bg-primary text-white p-4 d-flex justify-content-between align-items-center">
                     <div>
                         <h3 class="m-0 text-white">Orden #${order.id}</h3>
-                        <span class="badge ${this._getStatusClass(order.estado_nombre)} mt-2 px-3">${order.estado_nombre}</span>
+                        <span class="badge-status ${this._getStatusClass(order.estado_nombre)} mt-2">${order.estado_nombre}</span>
                     </div>
                     <button class="modal-close text-white" style="font-size: 1.5rem; background: none; border: none; cursor: pointer;">&times;</button>
                 </div>
                 <div class="modal-body p-4 bg-light">
                     <div class="card mb-4 shadow-sm border-0">
                         <div class="card-body">
-                            <h4 class="text-secondary mb-3 border-bottom pb-2">Información del Vehículo</h4>
+                            <h4 class="text-dark mb-3 border-bottom pb-2">Información del Vehículo</h4>
                             <div class="d-flex justify-content-between">
                                 <div>
-                                    <p class="mb-1"><strong>Vehículo:</strong> ${order.marca} ${order.modelo}</p>
-                                    <p class="mb-0 text-secondary"><strong>Placa:</strong> ${order.placa}</p>
+                                    <p class="mb-1 text-dark"><strong>Vehículo:</strong> ${order.marca} ${order.modelo}</p>
+                                    <p class="mb-0 text-muted"><strong>Placa:</strong> <span class="text-dark">${order.placa}</span></p>
                                 </div>
                                 <div class="text-right">
-                                     <p class="mb-1"><strong>Fecha Ingreso:</strong> ${order.fecha_ingreso ? new Date(order.fecha_ingreso).toLocaleDateString() : 'N/A'}</p>
+                                     <p class="mb-1 text-dark"><strong>Fecha Ingreso:</strong> ${order.fecha_ingreso ? new Date(order.fecha_ingreso).toLocaleDateString() : 'N/A'}</p>
                                 </div>
                             </div>
                         </div>
@@ -416,7 +416,7 @@ export default class ClientView {
                             <div class="card mb-4 shadow-sm border-0 h-100">
                                 <div class="card-body">
                                     <h5 class="text-primary mb-3">Reporte</h5>
-                                    <p class="text-secondary">${order.problema_reportado || 'Sin reporte'}</p>
+                                    <p class="text-dark">${order.problema_reportado || 'Sin reporte'}</p>
                                 </div>
                             </div>
                          </div>
@@ -424,7 +424,7 @@ export default class ClientView {
                             <div class="card mb-4 shadow-sm border-0 h-100">
                                 <div class="card-body">
                                     <h5 class="text-info mb-3">Diagnóstico</h5>
-                                    <p class="text-secondary">${order.diagnostico || 'Pendiente'}</p>
+                                    <p class="text-dark">${order.diagnostico || 'Pendiente'}</p>
                                 </div>
                             </div>
                          </div>
@@ -442,22 +442,22 @@ export default class ClientView {
                                 <tbody>
                                     ${(order.detalles_servicios || []).map(s => `
                                         <tr>
-                                            <td class="p-3 border-bottom-light">
+                                            <td class="p-3 border-bottom-light text-dark">
                                                 <span class="badge badge-info mr-2">Servicio</span> ${s.servicio_nombre}
                                             </td>
                                             <td class="p-3 border-bottom-light text-right text-dark font-weight-bold">
-                                                $${parseFloat(s.precio_aplicado).toFixed(2)}
+                                                Bs. ${parseFloat(s.precio_aplicado).toFixed(2)}
                                             </td>
                                         </tr>
                                     `).join('')}
                                     
                                      ${(order.detalles_repuestos || []).map(r => `
                                         <tr>
-                                            <td class="p-3 border-bottom-light">
+                                            <td class="p-3 border-bottom-light text-dark">
                                                 <span class="badge badge-warning mr-2">Repuesto</span> ${r.repuesto_nombre} <span class="text-secondary small">(x${r.cantidad})</span>
                                             </td>
                                             <td class="p-3 border-bottom-light text-right text-dark font-weight-bold">
-                                                $${(parseFloat(r.precio_unitario_aplicado) * r.cantidad).toFixed(2)}
+                                                Bs. ${(parseFloat(r.precio_unitario_aplicado) * r.cantidad).toFixed(2)}
                                             </td>
                                         </tr>
                                     `).join('')}
@@ -465,7 +465,7 @@ export default class ClientView {
                                 <tfoot class="bg-light">
                                     <tr>
                                         <td class="p-3 text-right"><strong>TOTAL ESTIMADO</strong></td>
-                                        <td class="p-3 text-right"><h3 class="m-0 text-primary">$${(order.total_estimado || 0).toFixed(2)}</h3></td>
+                                        <td class="p-3 text-right"><h3 class="m-0 text-primary">Bs. ${(order.total_estimado || 0).toFixed(2)}</h3></td>
                                     </tr>
                                 </tfoot>
                              </table>
@@ -480,14 +480,13 @@ export default class ClientView {
     }
 
     _getStatusClass(status) {
-        if (!status) return 'badge-secondary';
-        switch (status.toLowerCase()) {
-            case 'pendiente': return 'badge-warning';
-            case 'en progreso': return 'badge-info';
-            case 'completado': return 'badge-success';
-            case 'cancelado': return 'badge-danger';
-            default: return 'badge-secondary';
-        }
+        if (!status) return 'secondary';
+        const s = status.toLowerCase();
+        if (s.includes('pendiente')) return 'pendiente';
+        if (s.includes('proceso') || s.includes('progreso')) return 'proceso';
+        if (s.includes('finaliz') || s.includes('entregado') || s.includes('completado')) return 'finalizado';
+        if (s.includes('cancel')) return 'cancelado';
+        return 'secondary';
     }
 
     bindEditClient(handler) {
@@ -534,9 +533,13 @@ export default class ClientView {
                             <input type="text" name="vin" class="form-control" value="${isEdit ? vehicleToEdit.vin || '' : ''}">
                         </div>
                     </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn-secondary modal-close">Cancelar</button>
-                        <button type="submit" class="btn-primary">${isEdit ? 'Actualizar' : 'Guardar Vehículo'}</button>
+                    <div class="modal-footer d-flex justify-content-between align-items-center bg-light border-top-0">
+                        <button type="button" class="btn btn-danger rounded-pill px-4 shadow-sm modal-close" style="height: 45px; display: flex; align-items: center; justify-content: center; background-color: #ef4444; border-color: #ef4444; color: white; font-size: 0.95rem; font-weight: 700;">
+                            <i class="fas fa-times me-2"></i> Cancelar
+                        </button>
+                        <button type="submit" class="btn btn-primary rounded-pill px-4 shadow-sm" style="height: 45px; display: flex; align-items: center; justify-content: center; background-color: #4f46e5; border-color: #4f46e5; font-size: 0.95rem; font-weight: 700;">
+                            <i class="fas fa-save me-2"></i> ${isEdit ? 'Actualizar' : 'Guardar Vehículo'}
+                        </button>
                     </div>
                 </form>
             </div>
@@ -549,7 +552,7 @@ export default class ClientView {
             e.preventDefault();
             const formData = new FormData(e.target);
             const data = Object.fromEntries(formData.entries());
-            
+
             if (this.onSaveVehicle) {
                 this.onSaveVehicle(client.id, data, vehicleToEdit ? vehicleToEdit.id : null);
             }
@@ -561,60 +564,73 @@ export default class ClientView {
         this.onSaveVehicle = handler;
     }
 
-    bindVehicleEvents(handler) {
-         // Add Vehicle Buttons (Empty state and List state)
-         const addBtns = document.querySelectorAll('.btn-add-vehicle');
-         addBtns.forEach(btn => {
-             btn.addEventListener('click', () => {
-                 // Trigger logic to show modal. Data for client is needed? 
-                 // We handled renderClientDetails passing 'client'. We need to know which client.
-                 // The view state might not be ideal here. Better to pass handler that triggers controller.
-                 handler('add');
-             });
-         });
+    bindVehicleEvents(handler, context = document) {
+        // Add Vehicle Buttons
+        const addBtns = context.querySelectorAll('.btn-add-vehicle');
+        addBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                handler('add');
+            });
+        });
 
-         // Edit Vehicle Buttons
-         const editBtns = document.querySelectorAll('.btn-edit-vehicle');
-         editBtns.forEach(btn => {
-             btn.addEventListener('click', (e) => {
-                 const id = btn.getAttribute('data-id');
-                 handler('edit', id);
-             });
-         });
+        // Edit Vehicle Buttons
+        const editBtns = context.querySelectorAll('.btn-edit-vehicle');
+        editBtns.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const id = btn.getAttribute('data-id');
+                handler('edit', id);
+            });
+        });
     }
 
     /**
      * Renderiza la lista de vehículos del cliente.
      */
     _renderVehicles(autos) {
+        const addBtnHTML = `
+            <button class="btn btn-success text-white d-flex align-items-center gap-2 px-4 shadow-sm btn-add-vehicle" style="border-radius: 8px;">
+                <i class="fas fa-plus"></i>
+                <span>Agregar Vehículo</span>
+            </button>
+        `;
+
         if (!autos || !Array.isArray(autos) || autos.length === 0) {
             return `
                 <div class="p-4 text-center">
-                    <p class="text-secondary mb-3">Este cliente no tiene vehículos registrados</p>
-                    <button class="btn-primary btn-add-vehicle">+ Agregar Vehículo</button>
+                    <div class="d-flex flex-column align-items-center justify-content-center mb-3">
+                        <div class="text-secondary opacity-50 mb-3"><i class="fas fa-car fa-3x"></i></div>
+                        <p class="text-secondary">Este cliente no tiene vehículos registrados</p>
+                    </div>
+                    <div class="d-flex justify-content-center">
+                        ${addBtnHTML}
+                    </div>
                 </div>
             `;
         }
 
         return `
             <div class="p-4">
-                <div class="mb-3">
-                    <button class="btn-primary btn-add-vehicle">+ Agregar Vehículo</button>
+                <div class="mb-4 d-flex justify-content-end">
+                    ${addBtnHTML}
                 </div>
                 <div class="vehicle-list">
                     ${autos.map(auto => `
-                        <div class="vehicle-card d-flex align-items-center p-3 border rounded mb-2 shadow-sm">
-                            <div class="vehicle-icon mr-3" style="font-size: 1.5rem;"><i class="fas fa-car text-primary"></i></div>
-                            <div class="vehicle-info flex-grow-1">
-                                <h4 class="mb-1">${auto.marca} ${auto.modelo}</h4>
-                                <p class="text-secondary mb-0 small">
-                                    <span class="badge badge-light border">Placa: ${auto.placa}</span> | 
-                                    Año: ${auto.anio || 'N/A'} | 
-                                    Color: ${auto.color || 'N/A'}
-                                </p>
+                        <div class="vehicle-card d-flex align-items-center p-3 border rounded mb-3 shadow-sm bg-white hover-card">
+                            <div class="vehicle-icon mr-4 p-3 rounded-circle bg-light text-primary" style="width: 50px; height: 50px; display: flex; align-items: center; justify-content: center;">
+                                <i class="fas fa-car fa-lg"></i>
                             </div>
-                            <div class="vehicle-actions">
-                                <button class="btn-sm btn-secondary btn-edit-vehicle" data-id="${auto.id}" title="Editar"><i class="fas fa-edit"></i></button>
+                            <div class="vehicle-info flex-grow-1">
+                                <h5 class="mb-1 font-weight-bold text-dark">${auto.marca} ${auto.model || auto.modelo}</h5>
+                                <div class="text-secondary small d-flex gap-3">
+                                    <span class="badge badge-light border text-muted"><i class="fas fa-barcode mr-1"></i> ${auto.placa}</span>
+                                    <span><i class="far fa-calendar-alt mr-1"></i> ${auto.anio || 'N/A'}</span>
+                                    <span><i class="fas fa-palette mr-1"></i> ${auto.color || 'N/A'}</span>
+                                </div>
+                            </div>
+                            <div class="vehicle-actions ml-3">
+                                <button class="btn btn-outline-primary btn-sm btn-edit-vehicle" data-id="${auto.id}" title="Editar" style="border-radius: 6px; padding: 0.4rem 0.6rem;">
+                                    <i class="fas fa-edit"></i>
+                                </button>
                             </div>
                         </div>
                     `).join('')}
@@ -640,6 +656,7 @@ export default class ClientView {
                 // Edit Client
                 const editBtn = e.target.closest('.btn-edit');
                 if (editBtn) {
+                    e.stopPropagation();
                     const id = editBtn.dataset.id;
                     // Find client data to pass to handler if needed, or just ID.
                     // Controller 'handleEditClient' usually needs the ID, or View might need to call internal show.
@@ -665,11 +682,11 @@ export default class ClientView {
             btn.addEventListener('click', () => {
                 // Update Buttons
                 buttons.forEach(b => {
-                    b.classList.remove('active', 'border-primary', 'font-weight-bold', 'text-primary'); 
+                    b.classList.remove('active', 'border-primary', 'font-weight-bold', 'text-primary');
                     b.classList.add('text-secondary');
                     b.style.borderBottom = 'none';
                 });
-                
+
                 btn.classList.add('active', 'font-weight-bold', 'text-primary');
                 btn.classList.remove('text-secondary');
                 btn.style.borderBottom = '2px solid var(--primary-color)';
@@ -677,7 +694,7 @@ export default class ClientView {
                 // Update Content
                 const target = btn.getAttribute('data-tab');
                 panes.forEach(pane => {
-                    if(pane.id === `tab-${target}`) {
+                    if (pane.id === `tab-${target}`) {
                         pane.style.display = 'block';
                         pane.classList.remove('hidden');
                         pane.classList.add('active');

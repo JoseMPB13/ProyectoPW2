@@ -21,11 +21,21 @@ export default class VehicleView {
             <div class="card fade-in shadow-sm border-0 rounded-lg p-4">
                 <div class="view-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
                     <div>
-                        <h2 style="font-family: 'Inter', sans-serif; font-weight: 600;">Gestión de Autos</h2>
+                        <h2 class="mb-1 font-weight-bold text-main">Gestión de Autos</h2>
                         <p class="text-secondary">Administra la flota de vehículos registrados</p>
                     </div>
-                    <div style="display: flex; gap: 1rem; align-items: center;">
-                        <button class="btn btn-primary" id="newVehicleBtn">
+                    <div class="d-flex gap-3 align-items-center">
+                         <div class="search-wrapper position-relative">
+                            <i class="fas fa-search position-absolute text-muted" style="left: 12px; top: 50%; transform: translateY(-50%); font-size: 0.9rem;"></i>
+                            <input 
+                                type="text" 
+                                id="vehicleSearchInput" 
+                                placeholder="Buscar vehículo..." 
+                                class="form-control pl-5"
+                                style="padding-left: 35px; border-radius: 8px; border: 1px solid #e2e8f0; width: 250px;"
+                            >
+                        </div>
+                        <button class="btn btn-success text-white" id="newVehicleBtn">
                             <i class="fas fa-plus mr-2"></i> Nuevo Vehículo
                         </button>
                     </div>
@@ -38,6 +48,7 @@ export default class VehicleView {
                                 <th class="py-3 px-4 border-bottom text-uppercase text-secondary text-xs font-weight-bold">Placa</th>
                                 <th class="py-3 px-4 border-bottom text-uppercase text-secondary text-xs font-weight-bold">Vehículo</th>
                                 <th class="py-3 px-4 border-bottom text-uppercase text-secondary text-xs font-weight-bold">Cliente</th>
+                                <th class="py-3 px-4 border-bottom text-uppercase text-secondary text-xs font-weight-bold">Mecánico</th>
                                 <th class="py-3 px-4 border-bottom text-uppercase text-secondary text-xs font-weight-bold text-center">Estado (Orden)</th>
                                 <th class="py-3 px-4 border-bottom text-uppercase text-secondary text-xs font-weight-bold">Ingreso</th>
                                 <th class="py-3 px-4 border-bottom text-uppercase text-secondary text-xs font-weight-bold text-center">Acciones</th>
@@ -53,7 +64,7 @@ export default class VehicleView {
 
         this.bindEvents();
     }
-    
+
     /**
      * Genera el HTML de las filas de la tabla.
      */
@@ -65,23 +76,30 @@ export default class VehicleView {
         return vehicles.map(v => {
             const clientName = v.client_name || 'N/A';
             const statusBadge = this._getStatusBadge(v.estado_nombre);
-            
+
             return `
                 <tr>
                     <td class="py-3 px-4 border-bottom font-weight-bold text-primary">${v.placa || '-'}</td>
                     <td class="py-3 px-4 border-bottom">
-                         <div class="font-weight-bold text-dark">${v.marca} ${v.modelo}</div>
+                         <div class="font-weight-bold text-main">${v.marca} ${v.modelo}</div>
                          <div class="text-secondary small">VIN: ${v.vin || 'N/A'}</div>
                     </td>
                     <td class="py-3 px-4 border-bottom">
-                        <div class="font-weight-bold text-dark">${clientName}</div>
+                        <div class="font-weight-bold text-main">${v.clientName || v.client_name || 'N/A'}</div>
                         <div class="text-secondary small">CI: ${v.client_ci || 'N/A'}</div>
                     </td>
+                    <td class="py-3 px-4 border-bottom text-secondary">${v.technician_name || '-'}</td>
                     <td class="py-3 px-4 border-bottom text-center">${statusBadge}</td>
                     <td class="py-3 px-4 border-bottom text-secondary">${v.fecha_ingreso ? new Date(v.fecha_ingreso).toLocaleDateString() : '-'}</td>
                     <td class="py-3 px-4 border-bottom text-center">
-                        <button class="btn-icon btn-view view-btn" data-id="${v.id}" title="Ver"><i class="fas fa-eye"></i></button>
-                        <button class="btn-icon btn-edit edit-btn" data-id="${v.id}" title="Editar"><i class="fas fa-edit"></i></button>
+                    <div class="btn-group" role="group">
+                        <button class="btn btn-sm btn-outline-primary mr-1 view-btn" data-id="${v.id}" title="Ver">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-secondary edit-btn" data-id="${v.id}" title="Editar">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                    </div>
                     </td>
                 </tr>
             `;
@@ -92,8 +110,29 @@ export default class VehicleView {
      * Retorna el HTML del badge según estado.
      */
     _getStatusBadge(status) {
-        const config = getStatusConfig(status);
-        return `<span class="badge ${config.class} px-3 py-1">${config.label}</span>`;
+        let statusClass = 'secondary';
+        const s = (status || '').toLowerCase();
+        if (s.includes('pendiente')) statusClass = 'pendiente';
+        else if (s.includes('proceso') || s.includes('progreso')) statusClass = 'proceso';
+        else if (s.includes('finaliz') || s.includes('entregado') || s.includes('completado')) statusClass = 'finalizado';
+        else if (s.includes('cancel')) statusClass = 'cancelado';
+
+        return `<span class="badge-status ${statusClass}">${status || 'Sin Orden'}</span>`;
+    }
+
+    updateVehicleList(vehicles) {
+         const tbody = this.appContent.querySelector('tbody');
+         if (tbody) {
+             tbody.innerHTML = this._generateRows(vehicles);
+             this.bindTableEvents();
+         }
+    }
+
+    bindSearch(handler) {
+        const input = document.getElementById('vehicleSearchInput');
+        if (input) {
+            input.addEventListener('input', (e) => handler(e.target.value));
+        }
     }
 
     bindEvents() {
@@ -101,25 +140,25 @@ export default class VehicleView {
         if (btn) {
             btn.addEventListener('click', () => this.showVehicleModal(null));
         }
-        
+
         // ... (View/Edit binds kept identical via delegation or re-bind) ...
         const viewBtns = document.querySelectorAll('.view-btn');
         viewBtns.forEach(b => {
-             b.addEventListener('click', () => {
-                 const id = b.getAttribute('data-id');
-                 if (this.onViewVehicle) this.onViewVehicle(id);
+            b.addEventListener('click', () => {
+                const id = b.getAttribute('data-id');
+                if (this.onViewVehicle) this.onViewVehicle(id);
             });
         });
 
         const editBtns = document.querySelectorAll('.edit-btn');
         editBtns.forEach(b => {
-             b.addEventListener('click', () => {
-                 const id = b.getAttribute('data-id');
-                 if (this.onEditVehicle) this.onEditVehicle(id);
+            b.addEventListener('click', () => {
+                const id = b.getAttribute('data-id');
+                if (this.onEditVehicle) this.onEditVehicle(id);
             });
         });
     }
-    
+
     bindViewVehicle(handler) {
         this.onViewVehicle = handler;
     }
@@ -132,11 +171,38 @@ export default class VehicleView {
         this.onCreateVehicle = handler;
     }
 
+    // Helper to re-bind table events after update (or we could switch to delegation)
+    // For now, let's just make sure the Controller calls this or we call it internally?
+    // The Controller typically calls `render`. `updateVehicleList` is new. 
+    // I need to make sure `updateVehicleList` also re-binds.
+    // I'll modify `updateVehicleList` above to dispatch a custom event or let controller handle it?
+    // Better yet, I will add `bindTableEvents` here and call it.
+    
+    bindTableEvents() {
+        // We need the handlers... which are stored in `this`.
+        const viewBtns = document.querySelectorAll('.view-btn');
+        viewBtns.forEach(b => {
+             // Removing old potentially? Browsers handle this but good practice.
+            b.onclick = () => {
+                const id = b.getAttribute('data-id');
+                if (this.onViewVehicle) this.onViewVehicle(id);
+            };
+        });
+
+        const editBtns = document.querySelectorAll('.edit-btn');
+        editBtns.forEach(b => {
+            b.onclick = () => {
+                const id = b.getAttribute('data-id');
+                if (this.onEditVehicle) this.onEditVehicle(id);
+            };
+        });
+    }
+
     showVehicleModal(vehicleToEdit, vehicleData = null) {
         const isEdit = !!vehicleToEdit;
-        
+
         // Client Options
-        const clientOptions = this.clients.map(c => 
+        const clientOptions = this.clients.map(c =>
             `<option value="${c.id}" ${vehicleToEdit && vehicleToEdit.client_id === c.id ? 'selected' : ''}>${c.nombre} ${c.apellido_p} (${c.ci})</option>`
         ).join('');
 
@@ -146,7 +212,7 @@ export default class VehicleView {
                 <div class="form-grid">
                     ${!isEdit ? `
                     <div class="form-group full-width">
-                        <label>Cliente *</label>
+                        <label class="form-label text-dark font-weight-bold">Cliente *</label>
                         <select name="cliente_id" class="form-control" required>
                             <option value="">Seleccionar Cliente...</option>
                             ${clientOptions}
@@ -154,27 +220,27 @@ export default class VehicleView {
                     </div>` : ''}
                     
                     <div class="form-group">
-                        <label>Placa *</label>
+                        <label class="form-label text-dark font-weight-bold">Placa *</label>
                         <input type="text" name="plate" class="form-control" value="${isEdit ? vehicleToEdit.placa || '' : ''}" required ${isEdit ? 'readonly' : ''}>
                     </div>
                     <div class="form-group">
-                        <label>Marca *</label>
+                        <label class="form-label text-dark font-weight-bold">Marca *</label>
                         <input type="text" name="brand" class="form-control" value="${isEdit ? vehicleToEdit.marca || '' : ''}" required>
                     </div>
                     <div class="form-group">
-                        <label>Modelo *</label>
+                        <label class="form-label text-dark font-weight-bold">Modelo *</label>
                         <input type="text" name="model" class="form-control" value="${isEdit ? vehicleToEdit.modelo || '' : ''}" required>
                     </div>
                     <div class="form-group">
-                        <label>Año *</label>
+                        <label class="form-label text-dark font-weight-bold">Año *</label>
                         <input type="number" name="year" class="form-control" value="${isEdit ? vehicleToEdit.anio || '' : ''}" required>
                     </div>
                     <div class="form-group">
-                        <label>Color</label>
+                        <label class="form-label text-dark font-weight-bold">Color</label>
                         <input type="text" name="color" class="form-control" value="${isEdit ? vehicleToEdit.color || '' : ''}">
                     </div>
                      <div class="form-group">
-                        <label>VIN</label>
+                        <label class="form-label text-dark font-weight-bold">VIN</label>
                         <input type="text" name="vin" class="form-control" value="${isEdit ? vehicleToEdit.vin || '' : ''}">
                     </div>
                 </div>
@@ -182,8 +248,14 @@ export default class VehicleView {
         `;
 
         const footerHTML = `
-             <button type="button" class="btn-secondary modal-close-btn" id="cancelBtn">Cancelar</button>
-             <button type="submit" form="vehicleForm" class="btn-primary">${isEdit ? 'Actualizar' : 'Guardar'}</button>
+             <div class="d-flex justify-content-between w-100">
+                <button type="button" class="btn btn-danger rounded-pill px-4 shadow-sm modal-close-btn" id="cancelBtn" style="height: 45px; display: flex; align-items: center; justify-content: center; background-color: #ef4444; border-color: #ef4444; color: white; font-size: 0.95rem; font-weight: 700;">
+                    <i class="fas fa-times me-2"></i> Cancelar
+                </button>
+                <button type="submit" form="vehicleForm" class="btn btn-primary rounded-pill px-4 shadow-sm" style="height: 45px; display: flex; align-items: center; justify-content: center; background-color: #4f46e5; border-color: #4f46e5; font-size: 0.95rem; font-weight: 700;">
+                    <i class="fas fa-save me-2"></i> ${isEdit ? 'Actualizar' : 'Guardar'}
+                </button>
+             </div>
         `;
 
         this.modal.open(isEdit ? 'Editar Vehículo' : 'Nuevo Vehículo', formHTML, footerHTML);
@@ -198,15 +270,15 @@ export default class VehicleView {
         // Reading ModalView again: `const closeBtn = overlay.querySelector('.modal-close-btn');` -> Single Element.
         // So I must manually bind cancel button logic or update ModalView to selectAll.
         // I'll manually bind for safety here.
-        
+
         const cancelBtn = document.getElementById('cancelBtn');
-        if(cancelBtn) cancelBtn.addEventListener('click', () => this.modal.close());
+        if (cancelBtn) cancelBtn.addEventListener('click', () => this.modal.close());
 
         document.getElementById('vehicleForm').onsubmit = (e) => {
             e.preventDefault();
             const formData = new FormData(e.target);
             const data = Object.fromEntries(formData.entries());
-            
+
             if (isEdit) {
                 if (this.onSaveVehicle) this.onSaveVehicle(vehicleToEdit.id, data);
             } else {
@@ -221,7 +293,7 @@ export default class VehicleView {
     }
 
     showDetailsModal(vehicle) {
-         const content = `
+        const content = `
             <div class="p-4">
                 <div class="mb-4 text-center">
                     <div class="text-primary mb-2"><i class="fas fa-car fa-4x"></i></div>
@@ -245,17 +317,19 @@ export default class VehicleView {
                         <strong>Estado Actual:</strong> <span>${vehicle.estado_nombre || 'N/A'}</span>
                     </div>
                 </div>
-                <div class="text-right mt-4">
-                    <button class="btn-secondary" onclick="document.querySelector('.modal-overlay').remove()">Cerrar</button>
+                <div class="modal-footer d-flex justify-content-end align-items-center bg-light border-top mt-4 pt-3" style="border-bottom-left-radius: 12px; border-bottom-right-radius: 12px; margin: 0 -1.5rem -1.5rem -1.5rem; padding: 1rem 1.5rem;">
+                    <button class="btn btn-danger rounded-pill px-4 shadow-sm close-modal-custom" style="height: 45px; display: flex; align-items: center; justify-content: center; background-color: #ef4444; border-color: #ef4444; color: white; font-size: 0.95rem; font-weight: 700;">
+                        <i class="fas fa-times me-2"></i> Cerrar
+                    </button>
                 </div>
             </div>
          `;
-         // Using custom modal simple implementation here or reusing ModalView
-         // ModalView expects HTML content string
-         this.modal.open('Detalle de Vehículo', content);
-         
-         // Re-bind close button logic if not handled by ModalView directly for custom buttons
-         const closeBtns = document.querySelectorAll('.modal-overlay button');
-         closeBtns.forEach(b => b.addEventListener('click', () => this.modal.close()));
+        // Using custom modal simple implementation here or reusing ModalView
+        // ModalView expects HTML content string
+        this.modal.open('Detalle de Vehículo', content);
+
+        // Re-bind close button logic if not handled by ModalView directly for custom buttons
+        const closeBtns = document.querySelectorAll('.modal-overlay button');
+        closeBtns.forEach(b => b.addEventListener('click', () => this.modal.close()));
     }
 }

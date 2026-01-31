@@ -8,6 +8,7 @@ export default class InventoryController {
         this.view = view;
         
         this.parts = [];
+        this.currentSearch = '';
     }
 
     async init() {
@@ -22,7 +23,9 @@ export default class InventoryController {
     }
 
     handleSearch(query) {
-        const term = query.toLowerCase().trim();
+        this.currentSearch = query.toLowerCase().trim();
+        const term = this.currentSearch;
+        
         if (!term) {
             this.view.updatePartsList(this.parts);
             return;
@@ -40,7 +43,19 @@ export default class InventoryController {
         try {
             this.view.showLoading();
             this.parts = await this.model.getParts();
-            this.view.render(this.parts);
+            
+            // Apply current search if exists (client side persistence)
+            let displayParts = this.parts;
+            if(this.currentSearch) {
+                const term = this.currentSearch;
+                displayParts = this.parts.filter(p => 
+                    (p.nombre && p.nombre.toLowerCase().includes(term)) ||
+                    (p.marca && p.marca.toLowerCase().includes(term)) ||
+                    (p.id && p.id.toString().includes(term))
+                );
+            }
+            
+            this.view.render(displayParts, this.currentSearch);
         } catch (error) {
             console.error('Error cargando inventario:', error);
             Toast.error('Error al cargar inventario');

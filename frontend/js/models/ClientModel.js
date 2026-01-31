@@ -28,6 +28,10 @@ export default class ClientModel {
     }
     
     async create(data) {
+        // Aseguramos que el campo 'ci' esté presente
+        if (!data.ci) {
+            throw new Error("El campo 'ci' (cédula) es obligatorio.");
+        }
         return await this.api.post(this.endpoint, data);
     }
 

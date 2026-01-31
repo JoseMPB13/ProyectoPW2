@@ -30,12 +30,30 @@ export default class VehicleController {
             this.view.bindEditVehicle(this.handleEditVehicle.bind(this));
             this.view.bindSaveVehicle(this.handleSaveVehicle.bind(this));
             this.view.bindViewVehicle(this.handleViewVehicle.bind(this));
+            this.view.bindSearch(this.handleSearch.bind(this));
             this.view.bindCreateVehicle(this.handleCreateVehicle.bind(this));
 
         } catch (error) {
             console.error('Error inicializando VehicleController:', error);
             this.view.render([], []);
         }
+    }
+
+    handleSearch(query) {
+        const term = query.toLowerCase().trim();
+        if (!term) {
+            this.view.updateVehicleList(this.vehicles);
+            return;
+        }
+
+        const filtered = this.vehicles.filter(v => 
+            (v.placa && v.placa.toLowerCase().includes(term)) || 
+            (v.marca && v.marca.toLowerCase().includes(term)) ||
+            (v.modelo && v.modelo.toLowerCase().includes(term)) ||
+            (v.client_name && v.client_name.toLowerCase().includes(term)) ||
+            (v.client_ci && v.client_ci.toLowerCase().includes(term))
+        );
+        this.view.updateVehicleList(filtered);
     }
 
     async handleCreateVehicle(data) {
@@ -45,12 +63,21 @@ export default class VehicleController {
                 alert('Debe seleccionar un cliente.');
                 return;
             }
-            await this.model.api.post(`/clients/${data.cliente_id}/vehicles`, data);
+            // Map frontend fields to backend expected fields
+            const payload = {
+                plate: data.plate || data.placa,
+                brand: data.brand || data.marca,
+                model: data.model || data.modelo,
+                year: Number(data.year || data.anio),
+                color: data.color,
+                vin: data.vin
+            };
+            await this.model.api.post(`/clients/${data.cliente_id}/vehicles`, payload);
             alert('Vehículo creado exitosamente');
             this.init(); // Reload
         } catch (error) {
             console.error(error);
-            alert('Error al crear vehículo');
+            alert('Error al crear vehículo: ' + (error.message || 'Error desconocido'));
         }
     }
 

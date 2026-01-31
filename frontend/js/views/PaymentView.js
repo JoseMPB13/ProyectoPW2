@@ -96,7 +96,7 @@ export default class PaymentView {
                         <div class="card-body d-flex justify-content-between align-items-center px-4">
                             <div>
                                 <h6 class="mb-2 text-secondary text-uppercase" style="letter-spacing: 1px; font-size: 0.85rem;">Pagos Registrados</h6>
-                                <h2 class="m-0 text-dark font-weight-bold">${summary.total_pagos || 0}</h2>
+                                <h2 class="m-0 font-weight-bold text-main">${summary.total_pagos || 0}</h2>
                             </div>
                             <div class="icon-circle bg-light rounded-circle d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
                                 <i class="fas fa-receipt fa-2x text-secondary"></i>
@@ -151,83 +151,115 @@ export default class PaymentView {
      */
     showPaymentModal(order) {
         // Validar si la orden puede ser cobrada
-        const isFinished = order.estado_nombre === 'Finalizado' || order.estado_nombre === 'Entregado';
+        const isFinished = order.estado_nombre === 'Finalizado' || order.estado_nombre === 'Entregado' || order.estado_nombre === 'Completado';
         
         if (!isFinished) {
             this.showErrorMessage('No se puede cobrar', `La orden debe estar en estado "Finalizado" o "Entregado" para poder cobrarla.<br>Estado actual: <strong>${order.estado_nombre}</strong>`);
             return;
         }
 
-        const saldoPendiente = order.saldo_pendiente || order.total_estimado;
-        const totalOrden = order.total_estimado || 0;
-        const totalPagado = order.total_pagado || 0;
+        const saldoPendiente = order.saldo_pendiente !== undefined ? parseFloat(order.saldo_pendiente) : parseFloat(order.total_estimado || 0);
+        const totalOrden = parseFloat(order.total_estimado || 0);
+        const totalPagado = totalOrden - saldoPendiente;
         
         const modalContent = `
-            <div class="payment-modal">
-                <!-- Header con información de la orden -->
-                <div class="payment-header p-4 bg-light border-bottom">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <h5 class="mb-1">Orden #${order.id}</h5>
-                            <p class="text-secondary mb-0">
-                                <i class="fas fa-car mr-1"></i> ${order.placa || 'N/A'} - ${order.marca || ''} ${order.modelo || ''}
-                            </p>
-                        </div>
-                        <div class="col-md-6 text-md-right">
-                            <h3 class="mb-0 text-primary">Bs. ${this.formatCurrency(totalOrden)}</h3>
-                            <small class="text-secondary">Total de la orden</small>
-                        </div>
-                    </div>
-                    ${totalPagado > 0 ? `
-                        <div class="alert alert-info mt-3 mb-0">
-                            <i class="fas fa-info-circle mr-1"></i>
-                            Ya se han pagado <strong>Bs. ${this.formatCurrency(totalPagado)}</strong>
-                            - Saldo pendiente: <strong>Bs. ${this.formatCurrency(saldoPendiente)}</strong>
-                        </div>
-                    ` : ''}
+            <div class="modal-content modal-large">
+                <div class="modal-header bg-light border-bottom">
+                    <h3 class="font-weight-bold mb-0 text-dark">Cobrar - Orden #${order.id}</h3>
+                    <button class="modal-close text-secondary" style="font-size: 1.5rem;">&times;</button>
                 </div>
 
-                <!-- Tabs de métodos de pago -->
-                <ul class="nav nav-tabs px-4 pt-3 border-0" role="tablist" style="background: #fafafa;">
-                    <li class="nav-item">
-                        <a class="nav-link active" id="cash-tab" data-toggle="tab" href="#cash" role="tab">
-                            <i class="fas fa-money-bill-wave mr-1"></i> Efectivo
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" id="qr-tab" data-toggle="tab" href="#qr" role="tab">
-                            <i class="fas fa-qrcode mr-1"></i> QR
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" id="card-tab" data-toggle="tab" href="#card" role="tab">
-                            <i class="fas fa-credit-card mr-1"></i> Tarjeta
-                        </a>
-                    </li>
-                </ul>
+                <div class="modal-body p-0">
+                    <div class="invoice-box p-4" style="max-width: 800px; margin: auto; padding: 30px; border: none; font-size: 16px; line-height: 24px;">
+                        
+                        <!-- Header con información de la orden -->
+                        <div class="border-bottom pb-4 mb-4">
+                            <div class="row align-items-center">
+                                <div class="col-md-6">
+                                    <h2 class="text-primary font-weight-bold mb-1">Orden #${order.id}</h2>
+                                    <p class="text-secondary mb-0">
+                                        <i class="fas fa-car mr-2"></i> ${order.placa || 'N/A'} - ${order.marca || ''} ${order.modelo || ''}
+                                    </p>
+                                </div>
+                                <div class="col-md-6 text-md-right">
+                                    <h2 class="mb-0 text-primary font-weight-bold">Bs. ${this.formatCurrency(totalOrden)}</h2>
+                                    <small class="text-secondary text-uppercase font-weight-bold">Total de la orden</small>
+                                </div>
+                            </div>
+                            
+                            ${totalPagado > 0 ? `
+                            <div class="alert alert-info mt-3 mb-0 rounded-pill px-4 shadow-sm border-0 d-inline-block">
+                                <i class="fas fa-info-circle mr-2"></i>
+                                Abonado: <strong>Bs. ${this.formatCurrency(totalPagado)}</strong>
+                                <span class="mx-2">|</span>
+                                Pendiente: <strong>Bs. ${this.formatCurrency(saldoPendiente)}</strong>
+                            </div>
+                            ` : ''}
+                        </div>
 
-                <!-- Tab content -->
-                <div class="tab-content p-4">
-                    <!-- Efectivo Tab -->
-                    <div class="tab-pane fade show active" id="cash" role="tabpanel">
-                        ${this.renderCashPaymentTab(order, saldoPendiente)}
-                    </div>
+                        <!-- Tabs de métodos de pago -->
+                        <ul class="nav nav-tabs border-bottom-0 mb-4" role="tablist">
+                            <li class="nav-item">
+                                <a class="nav-link active font-weight-bold pb-3" id="tab-pm-cash" data-toggle="tab" href="#pm-cash" role="tab" style="color: var(--text-main);">
+                                    <i class="fas fa-money-bill-wave mr-2"></i> Efectivo
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link font-weight-bold pb-3" id="tab-pm-qr" data-toggle="tab" href="#pm-qr" role="tab" style="color: var(--text-main);">
+                                    <i class="fas fa-qrcode mr-2"></i> QR
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link font-weight-bold pb-3" id="tab-pm-card" data-toggle="tab" href="#pm-card" role="tab" style="color: var(--text-main);">
+                                    <i class="fas fa-credit-card mr-2"></i> Tarjeta
+                                </a>
+                            </li>
+                        </ul>
 
-                    <!-- QR Tab -->
-                    <div class="tab-pane fade" id="qr" role="tabpanel">
-                        ${this.renderQRPaymentTab(order, saldoPendiente)}
-                    </div>
+                        <!-- Tab content -->
+                        <div class="tab-content" style="min-height: 300px;">
+                            <!-- Efectivo Tab -->
+                            <div class="tab-pane fade show active" id="pm-cash" role="tabpanel">
+                                ${this.renderCashPaymentTab(order, saldoPendiente)}
+                            </div>
 
-                    <!-- Tarjeta Tab -->
-                    <div class="tab-pane fade" id="card" role="tab panel">
-                        ${this.renderCardPaymentTab(order, saldoPendiente)}
+                            <!-- QR Tab -->
+                            <div class="tab-pane fade" id="pm-qr" role="tabpanel">
+                                ${this.renderQRPaymentTab(order, saldoPendiente)}
+                            </div>
+
+                            <!-- Tarjeta Tab -->
+                            <div class="tab-pane fade" id="pm-card" role="tabpanel">
+                                ${this.renderCardPaymentTab(order, saldoPendiente)}
+                            </div>
+                        </div>
+
                     </div>
                 </div>
             </div>
         `;
 
-        this.modal.open(`Cobrar - Orden #${order.id}`, modalContent);
-        this.attachPaymentModalEvents(order, saldoPendiente);
+        // Manual rendering to bypass ModalView's default structure and fully control the layout (Invoice Style)
+        // We reuse ModalView's existingModal property to ensure close() works elsewhere
+        this.modal.close(); // Close any existing
+
+        const overlay = document.createElement('div');
+        overlay.className = 'modal-overlay open';
+        overlay.innerHTML = modalContent;
+
+        document.body.appendChild(overlay);
+        this.modal.existingModal = overlay; // Hack: Allow this.modal.close() to work
+
+        // Event listeners for close
+        overlay.addEventListener('click', (e) => {
+             if (e.target === overlay) this.modal.close();
+        });
+
+        const closeBtns = overlay.querySelectorAll('.modal-close');
+        closeBtns.forEach(btn => btn.addEventListener('click', () => this.modal.close()));
+        
+        // Pass the overlay to event attachment to scope selectors
+        this.attachPaymentModalEvents(order, saldoPendiente, overlay);
     }
 
     /**
@@ -295,29 +327,45 @@ export default class PaymentView {
     renderCashPaymentTab(order, saldoPendiente) {
         return `
             <div class="cash-payment">
-                <div class="form-group">
-                    <label class="font-weight-bold">Monto a Cobrar (Bs)</label>
-                    <input type="number" id="cash-amount" class="form-control form-control-lg" 
-                           value="${saldoPendiente.toFixed(2)}" step="0.01" min="0" 
-                           max="${saldoPendiente.toFixed(2)}" style="font-size: 1.3rem;">
-                    <small class="text-secondary">Máximo: Bs. ${this.formatCurrency(saldoPendiente)}</small>
-                </div>
-
-                <div class="form-group mt-4">
-                    <label class="font-weight-bold">Monto Recibido (Bs)</label>
-                    <input type="number" id="cash-received" class="form-control form-control-lg" 
-                           placeholder="0.00" step="0.01" min="0" style="font-size: 1.3rem;">
-                </div>
-
-                <div class="alert alert-secondary mt-4" id="cash-change-display" style="display: none;">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <span class="font-weight-bold">Cambio a devolver:</span>
-                        <h3 class="mb-0 text-success" id="cash-change-amount">Bs. 0.00</h3>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group mb-4">
+                            <label class="font-weight-bold small text-uppercase text-secondary">Monto a Cobrar</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light border-right-0 font-weight-bold text-muted">Bs.</span>
+                                <input type="number" id="cash-amount" class="form-control form-control-lg border-left-0 font-weight-bold text-dark" 
+                                       value="${saldoPendiente.toFixed(2)}" step="0.01" min="0" 
+                                       max="${saldoPendiente.toFixed(2)}" style="font-size: 1.5rem;">
+                            </div>
+                            <small class="text-secondary mt-1 d-block">Máximo: Bs. ${this.formatCurrency(saldoPendiente)}</small>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                         <div class="form-group mb-4">
+                            <label class="font-weight-bold small text-uppercase text-secondary">Monto Recibido</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light border-right-0 font-weight-bold text-muted">Bs.</span>
+                                <input type="number" id="cash-received" class="form-control form-control-lg border-left-0 font-weight-bold text-success" 
+                                       placeholder="0.00" step="0.01" min="0" style="font-size: 1.5rem;">
+                            </div>
+                        </div>
                     </div>
                 </div>
 
-                <button id="cash-pay-btn" class="btn btn-success btn-lg btn-block mt-4" disabled>
-                    <i class="fas fa-check-circle mr-2"></i> Confirmar Pago en Efectivo
+                <div class="alert alert-light border shadow-sm p-3 mb-4" id="cash-change-display" style="display: none; background: #f8f9fa;">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <span class="d-block text-secondary small font-weight-bold text-uppercase">Cambio a devolver</span>
+                             <h2 class="mb-0 text-success font-weight-bold" id="cash-change-amount">Bs. 0.00</h2>
+                        </div>
+                        <div class="icon-circle bg-success text-white rounded-circle d-flex align-items-center justify-content-center shadow-sm" style="width: 50px; height: 50px;">
+                             <i class="fas fa-hand-holding-usd fa-lg"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <button id="cash-pay-btn" class="btn btn-success btn-lg btn-block shadow-sm rounded-pill font-weight-bold text-uppercase" disabled style="letter-spacing: 1px;">
+                    <i class="fas fa-check-circle mr-2"></i> Confirmar Pago
                 </button>
             </div>
         `;
@@ -329,24 +377,32 @@ export default class PaymentView {
     renderQRPaymentTab(order, saldoPendiente) {
         return `
             <div class="qr-payment text-center">
-                <div class="form-group">
-                    <label class="font-weight-bold">Monto a Cobrar (Bs)</label>
-                    <input type="number" id="qr-amount" class="form-control form-control-lg text-center" 
-                           value="${saldoPendiente.toFixed(2)}" step="0.01" min="0" 
-                           max="${saldoPendiente.toFixed(2)}" style="font-size: 1.5rem; font-weight: bold;">
+                <div class="form-group mb-4" style="max-width: 300px; margin: 0 auto;">
+                    <label class="font-weight-bold small text-uppercase text-secondary">Monto a Cobrar</label>
+                    <div class="input-group">
+                         <span class="input-group-text bg-light border-right-0 font-weight-bold text-muted">Bs.</span>
+                        <input type="number" id="qr-amount" class="form-control form-control-lg border-left-0 text-center font-weight-bold" 
+                               value="${saldoPendiente.toFixed(2)}" step="0.01" min="0" 
+                               max="${saldoPendiente.toFixed(2)}" style="font-size: 1.5rem;">
+                    </div>
                 </div>
 
-                <div class="qr-code-container mt-4 p-4 bg-white border rounded" style="display: inline-block;">
+                <div class="qr-code-container mb-4 p-4 bg-white shadow-sm border rounded" style="display: inline-block;">
                     <div id="qr-code" class="mb-3"></div>
-                    <p class="text-secondary mb-0"><small>Escanea el código QR con tu aplicación de pago</small></p>
+                    <p class="text-secondary mb-0 small"><i class="fas fa-scan mr-1"></i> Escanea con tu app bancaria</p>
                 </div>
 
-                <div class="alert alert-info mt-4">
-                    <i class="fas fa-info-circle mr-1"></i>
-                    El cliente debe escanear el código y confirmar el pago en su aplicación bancaria.
+                <div class="alert alert-info border-0 shadow-sm bg-light-info text-info mb-4 text-left">
+                    <div class="d-flex">
+                        <i class="fas fa-info-circle fa-lg mt-1 mr-3"></i>
+                        <div>
+                            <strong>Instrucciones:</strong>
+                            <p class="mb-0 small mt-1">El cliente debe escanear el código QR y confirmar la transacción. Una vez realizada, presione "Verificar".</p>
+                        </div>
+                    </div>
                 </div>
 
-                <button id="qr-verify-btn" class="btn btn-primary btn-lg btn-block mt-4">
+                <button id="qr-verify-btn" class="btn btn-primary btn-lg btn-block shadow-sm rounded-pill font-weight-bold text-uppercase" style="letter-spacing: 1px;">
                     <i class="fas fa-search mr-2"></i> Verificar Transferencia
                 </button>
             </div>
@@ -359,40 +415,50 @@ export default class PaymentView {
     renderCardPaymentTab(order, saldoPendiente) {
         return `
             <div class="card-payment">
-                <div class="form-group">
-                    <label class="font-weight-bold">Monto a Cobrar (Bs)</label>
-                    <input type="number" id="card-amount" class="form-control form-control-lg" 
-                           value="${saldoPendiente.toFixed(2)}" step="0.01" min="0" 
-                           max="${saldoPendiente.toFixed(2)}" style="font-size: 1.3rem;">
-                </div>
-
-                <div class="form-group mt-4">
-                    <label class="font-weight-bold">Número de Tarjeta</label>
-                    <input type="text" id="card-number" class="form-control form-control-lg" 
-                           placeholder="1234 5678 9012 3456" maxlength="19" 
-                           style="font-size: 1.2rem; letter-spacing: 2px;">
-                    <small class="text-secondary">Solo para simulación - No almacenamos datos reales</small>
-                </div>
-
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="form-group">
-                            <label class="font-weight-bold">Fecha de Expiración</label>
-                            <input type="text" id="card-expiry" class="form-control" 
-                                   placeholder="MM/AA" maxlength="5">
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="form-group">
-                            <label class="font-weight-bold">CVV</label>
-                            <input type="text" id="card-cvv" class="form-control" 
-                                   placeholder="123" maxlength="3">
-                        </div>
+                 <div class="form-group mb-4">
+                    <label class="font-weight-bold small text-uppercase text-secondary">Monto a Cobrar</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-light border-right-0 font-weight-bold text-muted">Bs.</span>
+                        <input type="number" id="card-amount" class="form-control form-control-lg border-left-0 font-weight-bold" 
+                               value="${saldoPendiente.toFixed(2)}" step="0.01" min="0" 
+                               max="${saldoPendiente.toFixed(2)}" style="font-size: 1.5rem;">
                     </div>
                 </div>
 
-                <button id="card-pay-btn" class="btn btn-success btn-lg btn-block mt-4" disabled>
-                    <i class="fas fa-credit-card mr-2"></i> Procesar Pago con Tarjeta
+                <div class="card-form-container p-4 bg-light rounded border mb-4">
+                    <div class="form-group mb-3">
+                        <label class="font-weight-bold small text-uppercase text-secondary">Número de Tarjeta</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-white border-right-0"><i class="far fa-credit-card text-muted"></i></span>
+                            <input type="text" id="card-number" class="form-control form-control-lg border-left-0" 
+                                   placeholder="0000 0000 0000 0000" maxlength="19" 
+                                   style="font-size: 1.2rem; letter-spacing: 2px;">
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group mb-0">
+                                <label class="font-weight-bold small text-uppercase text-secondary">Expiración</label>
+                                <input type="text" id="card-expiry" class="form-control text-center" 
+                                       placeholder="MM/AA" maxlength="5">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group mb-0">
+                                <label class="font-weight-bold small text-uppercase text-secondary">CVV</label>
+                                <div class="input-group">
+                                    <input type="text" id="card-cvv" class="form-control text-center text-security" 
+                                           placeholder="123" maxlength="3">
+                                    <span class="input-group-text bg-white"><i class="fas fa-lock text-muted small"></i></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <button id="card-pay-btn" class="btn btn-success btn-lg btn-block shadow-sm rounded-pill font-weight-bold text-uppercase" disabled style="letter-spacing: 1px;">
+                    <i class="fas fa-credit-card mr-2"></i> Procesar Pago
                 </button>
             </div>
         `;
@@ -401,25 +467,73 @@ export default class PaymentView {
     /**
      * Adjunta eventos al modal de pagos
      */
-    attachPaymentModalEvents(order, saldoPendiente) {
-        // === EFECTIVO - Cálculo de cambio en tiempo real ===
-        const cashAmount = document.getElementById('cash-amount');
-        const cashReceived = document.getElementById('cash-received');
-        const cashChangeDisplay = document.getElementById('cash-change-display');
-        const cashChangeAmount = document.getElementById('cash-change-amount');
-        const cashPayBtn = document.getElementById('cash-pay-btn');
+    /**
+     * Adjunta eventos al modal de pagos
+     */
+    attachPaymentModalEvents(order, saldoPendiente, overlay = document) {
+        // === TABS HANDLING (Manual Fix - Scoped to this modal) ===
+        const tabLinks = overlay.querySelectorAll('.nav-tabs .nav-link');
+        const tabContent = overlay.querySelectorAll('.tab-content .tab-pane');
+
+        tabLinks.forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                // Remove active from all tabs IN THIS MODAL
+                tabLinks.forEach(l => l.classList.remove('active'));
+                tabContent.forEach(c => {
+                    c.classList.remove('show', 'active');
+                });
+
+                // Add active to clicked
+                link.classList.add('active');
+                const targetId = link.getAttribute('href').substring(1);
+                const targetPane = overlay.querySelector(`#${targetId}`); // Select by ID within modal context (IDs should be unique anyway)
+                if (targetPane) {
+                    targetPane.classList.add('show', 'active');
+                }
+            });
+        });
+
+        // === EFECTIVO ===
+        const cashAmount = overlay.querySelector('#cash-amount');
+        const cashReceived = overlay.querySelector('#cash-received');
+        const cashChangeDisplay = overlay.querySelector('#cash-change-display');
+        const cashChangeAmount = overlay.querySelector('#cash-change-amount');
+        const cashPayBtn = overlay.querySelector('#cash-pay-btn');
 
         const updateCashChange = () => {
             const amount = parseFloat(cashAmount.value) || 0;
             const received = parseFloat(cashReceived.value) || 0;
+            const maxAmount = parseFloat(cashAmount.getAttribute('max')) || Infinity;
             
-            if (received >= amount && amount > 0) {
+            // Allow payment if:
+            // 1. Amount is greater than 0
+            // 2. Received covers amount
+            // 3. Amount does not exceed pending balance (max)
+            if (amount > 0 && received >= amount && amount <= maxAmount) {
                 const change = received - amount;
                 cashChangeAmount.textContent = `Bs. ${this.formatCurrency(change)}`;
                 cashChangeDisplay.style.display = 'block';
+                cashChangeDisplay.classList.remove('alert-danger');
+                cashChangeDisplay.classList.add('alert-light');
+                
+                // Show warning if user tries to pay more than pending, though input restriction helps, 
+                // code-wise validation is safer
+                if (amount > maxAmount) {
+                     cashPayBtn.disabled = true;
+                     return;
+                }
+
                 cashPayBtn.disabled = false;
             } else {
-                cashChangeDisplay.style.display = 'none';
+                if (amount > maxAmount) {
+                    cashChangeDisplay.style.display = 'block';
+                    cashChangeDisplay.innerHTML = `<span class="text-danger small font-weight-bold">El monto no puede exceder el saldo pendiente (Bs. ${maxAmount.toFixed(2)})</span>`;
+                    cashChangeDisplay.classList.remove('alert-light');
+                    cashChangeDisplay.classList.add('alert-danger');
+                } else {
+                    cashChangeDisplay.style.display = 'none';
+                }
                 cashPayBtn.disabled = true;
             }
         };
@@ -427,34 +541,39 @@ export default class PaymentView {
         if (cashAmount && cashReceived) {
             cashAmount.addEventListener('input', updateCashChange);
             cashReceived.addEventListener('input', updateCashChange);
+            // Initialize state immediately (in case values are pre-filled)
+            updateCashChange();
         }
 
         // Botón de pago en efectivo
         if (cashPayBtn) {
-            cashPayBtn.addEventListener('click', () => {
+            cashPayBtn.addEventListener('click', (e) => {
+                e.preventDefault();
                 const amount = parseFloat(cashAmount.value);
                 this.processPayment(order.id, amount, 'Efectivo', '');
             });
         }
 
-        // === QR - Generar código QR y verificar ===
-        this.generateQRCode(order.id, saldoPendiente);
+        // === QR ===
+        this.generateQRCode(order.id, saldoPendiente, overlay);
 
-        const qrVerifyBtn = document.getElementById('qr-verify-btn');
+        const qrVerifyBtn = overlay.querySelector('#qr-verify-btn');
         if (qrVerifyBtn) {
-            qrVerifyBtn.addEventListener('click', () => {
-                const amount = parseFloat(document.getElementById('qr-amount').value);
+            qrVerifyBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                const amount = parseFloat(overlay.querySelector('#qr-amount').value);
                 this.simulateQRVerification(order.id, amount);
             });
         }
 
-        // === TARJETA - Validación de formato y procesamiento ===
-        this.setupCardValidation();
+        // === TARJETA ===
+        this.setupCardValidation(overlay);
 
-        const cardPayBtn = document.getElementById('card-pay-btn');
+        const cardPayBtn = overlay.querySelector('#card-pay-btn');
         if (cardPayBtn) {
-            cardPayBtn.addEventListener('click', () => {
-                const amount = parseFloat(document.getElementById('card-amount').value);
+            cardPayBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                const amount = parseFloat(overlay.querySelector('#card-amount').value);
                 this.simulateCardPayment(order.id, amount);
             });
         }
@@ -463,8 +582,8 @@ export default class PaymentView {
     /**
      * Genera un código QR simple
      */
-    generateQRCode(orderId, amount) {
-        const qrContainer = document.getElementById('qr-code');
+    generateQRCode(orderId, amount, overlay) {
+        const qrContainer = overlay ? overlay.querySelector('#qr-code') : document.getElementById('qr-code');
         if (qrContainer) {
             // Simulación simple con placeholder - en producción usar qrcode.js
             qrContainer.innerHTML = `
@@ -489,11 +608,12 @@ export default class PaymentView {
     /**
      * Configura la validación de tarjeta en tiempo real
      */
-    setupCardValidation() {
-        const cardNumber = document.getElementById('card-number');
-        const cardExpiry = document.getElementById('card-expiry');
-        const cardCVV = document.getElementById('card-cvv');
-        const cardPayBtn = document.getElementById('card-pay-btn');
+    setupCardValidation(overlay) {
+        const context = overlay || document;
+        const cardNumber = context.querySelector('#card-number');
+        const cardExpiry = context.querySelector('#card-expiry');
+        const cardCVV = context.querySelector('#card-cvv');
+        const cardPayBtn = context.querySelector('#card-pay-btn');
 
         // Formatear número de tarjeta con espacios cada 4 dígitos
         if (cardNumber) {
@@ -501,7 +621,7 @@ export default class PaymentView {
                 let value = e.target.value.replace(/\s/g, '').replace(/[^0-9]/g, '');
                 let formattedValue = value.match(/.{1,4}/g)?.join(' ') || value;
                 e.target.value = formattedValue;
-                this.validateCardForm(cardPayBtn);
+                this.validateCardForm(cardPayBtn, context);
             });
         }
 
@@ -513,7 +633,7 @@ export default class PaymentView {
                     value = value.substring(0, 2) + '/' + value.substring(2, 4);
                 }
                 e.target.value = value;
-                this.validateCardForm(cardPayBtn);
+                this.validateCardForm(cardPayBtn, context);
             });
         }
 
@@ -521,7 +641,7 @@ export default class PaymentView {
         if (cardCVV) {
             cardCVV.addEventListener('input', (e) => {
                 e.target.value = e.target.value.replace(/\D/g, '');
-                this.validateCardForm(cardPayBtn);
+                this.validateCardForm(cardPayBtn, context);
             });
         }
     }
@@ -529,15 +649,20 @@ export default class PaymentView {
     /**
      * Valida el formulario de tarjeta
      */
-    validateCardForm(submitBtn) {
-        const cardNumber = document.getElementById('card-number');
-        const cardExpiry = document.getElementById('card-expiry');
-        const cardCVV = document.getElementById('card-cvv');
+    validateCardForm(submitBtn, context = document) {
+        const cardNumber = context.querySelector('#card-number');
+        const cardExpiry = context.querySelector('#card-expiry');
+        const cardCVV = context.querySelector('#card-cvv');
+        const cardAmount = context.querySelector('#card-amount');
+        
+        const amount = parseFloat(cardAmount.value) || 0;
+        const maxAmount = parseFloat(cardAmount.getAttribute('max')) || Infinity;
 
         const isValid = 
             cardNumber && cardNumber.value.replace(/\s/g, '').length === 16 &&
             cardExpiry && cardExpiry.value.length === 5 &&
-            cardCVV && cardCVV.value.length === 3;
+            cardCVV && cardCVV.value.length === 3 &&
+            amount > 0 && amount <= maxAmount;
 
         if (submitBtn) {
             submitBtn.disabled = !isValid;
@@ -613,114 +738,64 @@ export default class PaymentView {
      * Muestra animación de éxito con check verde
      */
     showSuccessAnimation(amount, metodo) {
-        const successHTML = `
-            <div class="payment-success text-center p-5">
-                <div class="success-checkmark mb-4">
-                    <div class="check-icon">
-                        <span class="icon-line line-tip"></span>
-                        <span class="icon-line line-long"></span>
-                        <div class="icon-circle"></div>
-                        <div class="icon-fix"></div>
+         // Close previous modal first
+         this.modal.close();
+
+         const overlay = document.createElement('div');
+         overlay.className = 'modal-overlay open';
+         
+         overlay.innerHTML = `
+            <div class="modal-content shadow-lg border-0" style="max-width: 450px; border-radius: 16px; overflow: hidden; animation: slideIn 0.3s ease-out;">
+                <div class="payment-success text-center p-5 bg-white">
+                    <div class="success-checkmark mb-4">
+                        <div class="check-icon">
+                            <span class="icon-line line-tip"></span>
+                            <span class="icon-line line-long"></span>
+                            <div class="icon-circle"></div>
+                            <div class="icon-fix"></div>
+                        </div>
                     </div>
+                    <h2 class="text-success font-weight-bold mb-3">¡Pago Exitoso!</h2>
+                    <p class="text-secondary mb-4" style="font-size: 1.1rem;">
+                        Se ha registrado el pago de<br>
+                        <strong class="text-dark">Bs. ${this.formatCurrency(amount)}</strong> mediante <strong class="text-dark">${metodo}</strong>
+                    </p>
+                    <button class="btn btn-primary btn-block rounded-pill py-2 shadow-sm font-weight-bold btn-close-success">
+                        Cerrar y Finalizar
+                    </button>
                 </div>
-                <h2 class="text-success mb-3">¡Pago Registrado!</h2>
-                <p class="text-secondary mb-4">
-                    El pago de <strong>Bs. ${this.formatCurrency(amount)}</strong> 
-                    mediante <strong>${metodo}</strong> ha sido registrado exitosamente.
-                </p>
-                <button class="btn btn-primary" onclick="document.querySelector('.modal-overlay')?.remove()">
-                    Cerrar
-                </button>
             </div>
-
+            
             <style>
-                .success-checkmark {
-                    width: 80px;
-                    height: 80px;
-                    margin: 0 auto;
+                @keyframes slideIn {
+                    from { transform: translateY(-20px); opacity: 0; }
+                    to { transform: translateY(0); opacity: 1; }
                 }
-                
-                .check-icon {
-                    width: 80px;
-                    height: 80px;
-                    position: relative;
-                    border-radius: 50%;
-                    box-sizing: content-box;
-                    border: 4px solid #4CAF50;
-                }
-                
-                .icon-line {
-                    height: 5px;
-                    background-color: #4CAF50;
-                    display: block;
-                    border-radius: 2px;
-                    position: absolute;
-                    z-index: 10;
-                }
-                
-                .line-tip {
-                    top: 46px;
-                    left: 14px;
-                    width: 25px;
-                    transform: rotate(45deg);
-                    animation: icon-line-tip 0.75s;
-                }
-                
-                .line-long {
-                    top: 38px;
-                    right: 8px;
-                    width: 47px;
-                    transform: rotate(-45deg);
-                    animation: icon-line-long 0.75s;
-                }
-                
-                .icon-circle {
-                    top: -4px;
-                    left: -4px;
-                    z-index: 10;
-                    width: 80px;
-                    height: 80px;
-                    border-radius: 50%;
-                    position: absolute;
-                    box-sizing: content-box;
-                    border: 4px solid rgba(76, 175, 80, .5);
-                }
-                
-                .icon-fix {
-                    top: 8px;
-                    width: 5px;
-                    left: 26px;
-                    z-index: 1;
-                    height: 85px;
-                    position: absolute;
-                    transform: rotate(-45deg);
-                    background-color: #fff;
-                }
-                
-                @keyframes icon-line-tip {
-                    0% { width: 0; left: 1px; top: 19px; }
-                    54% { width: 0; left: 1px; top: 19px; }
-                    70% { width: 50px; left: -8px; top: 37px; }
-                    84% { width: 17px; left: 21px; top: 48px; }
-                    100% { width: 25px; left: 14px; top: 46px; }
-                }
-                
-                @keyframes icon-line-long {
-                    0% { width: 0; right: 46px; top: 54px; }
-                    65% { width: 0; right: 46px; top: 54px; }
-                    84% { width: 55px; right: 0px; top: 35px; }
-                    100% { width: 47px; right: 8px; top: 38px; }
-                }
+                .success-checkmark { width: 80px; height: 80px; margin: 0 auto; }
+                .check-icon { width: 80px; height: 80px; position: relative; border-radius: 50%; box-sizing: content-box; border: 4px solid #4CAF50; }
+                .icon-line { height: 5px; background-color: #4CAF50; display: block; border-radius: 2px; position: absolute; z-index: 10; }
+                .line-tip { top: 46px; left: 14px; width: 25px; transform: rotate(45deg); animation: icon-line-tip 0.75s; }
+                .line-long { top: 38px; right: 8px; width: 47px; transform: rotate(-45deg); animation: icon-line-long 0.75s; }
+                .icon-circle { top: -4px; left: -4px; z-index: 10; width: 80px; height: 80px; border-radius: 50%; position: absolute; box-sizing: content-box; border: 4px solid rgba(76, 175, 80, .5); }
+                .icon-fix { top: 8px; width: 5px; left: 26px; z-index: 1; height: 85px; position: absolute; transform: rotate(-45deg); background-color: #fff; }
+                @keyframes icon-line-tip { 0% { width: 0; left: 1px; top: 19px; } 54% { width: 0; left: 1px; top: 19px; } 70% { width: 50px; left: -8px; top: 37px; } 84% { width: 17px; left: 21px; top: 48px; } 100% { width: 25px; left: 14px; top: 46px; } }
+                @keyframes icon-line-long { 0% { width: 0; right: 46px; top: 54px; } 65% { width: 0; right: 46px; top: 54px; } 84% { width: 55px; right: 0px; top: 35px; } 100% { width: 47px; right: 8px; top: 38px; } }
             </style>
-        `;
+         `;
 
-        this.modal.open('', successHTML);
+         document.body.appendChild(overlay);
+         this.modal.existingModal = overlay;
 
-        // Auto-cerrar después de 3 segundos
+         // Event listeners
+        overlay.addEventListener('click', (e) => {
+             if (e.target === overlay) this.modal.close();
+        });
+        overlay.querySelector('.btn-close-success').addEventListener('click', () => this.modal.close());
+
+        // Auto-cerrar después de 4 segundos
         setTimeout(() => {
-            const overlay = document.querySelector('.modal-overlay');
-            if (overlay) overlay.remove();
-        }, 3000);
+             if(this.modal.existingModal === overlay) this.modal.close();
+        }, 4000);
     }
 
     /**

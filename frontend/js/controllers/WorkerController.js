@@ -62,7 +62,10 @@ export default class WorkerController {
             );
         }
 
-        this.view.render(filtered);
+        this.view.render(filtered, {
+            search: this.currentSearch,
+            role: this.currentRoleFilter
+        });
     }
 
     /**

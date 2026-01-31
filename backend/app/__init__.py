@@ -12,7 +12,12 @@ def create_app():
 
     # Configuración CORS para permitir peticiones desde el frontend
     CORS(app, 
-         resources={r"/*": {"origins": ["http://localhost:5173", "http://127.0.0.1:5173", "http://localhost:3000"]}},
+         resources={r"/*": {"origins": [
+             "http://localhost:5173", 
+             "http://127.0.0.1:5173", 
+             "http://localhost:3000",
+             "http://192.168.208.1:3000"
+         ]}},
          allow_headers=["Content-Type", "Authorization", "Access-Control-Allow-Credentials"],
          methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
          supports_credentials=True,

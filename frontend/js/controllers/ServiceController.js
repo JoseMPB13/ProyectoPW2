@@ -3,7 +3,8 @@ export default class ServiceController {
         this.model = model;
         this.view = view;
         
-        this.services = [];
+        this.allServices = [];
+        this.currentSearch = '';
     }
 
     async init() {
@@ -14,24 +15,42 @@ export default class ServiceController {
     bindEvents() {
         this.view.onAction = (action, id) => this.handleAction(action, id);
         this.view.onSubmit = (data) => this.handleSubmit(data);
+        this.view.onSearch = (query) => this.handleSearch(query);
     }
 
     async loadServices() {
         try {
-            this.services = await this.model.getServices();
-            this.view.render(this.services);
+            this.allServices = await this.model.getServices();
+            this.filterAndRender();
         } catch (error) {
             console.error(error);
             this.view.showError('Error al cargar servicios');
         }
     }
 
+    handleSearch(query) {
+        this.currentSearch = query;
+        this.filterAndRender();
+    }
+
+    filterAndRender() {
+        let filtered = this.allServices;
+        if (this.currentSearch) {
+            const q = this.currentSearch.toLowerCase();
+            filtered = filtered.filter(s => 
+                s.nombre.toLowerCase().includes(q) || 
+                (s.descripcion && s.descripcion.toLowerCase().includes(q))
+            );
+        }
+        this.view.render(filtered, this.currentSearch);
+    }
+
     async handleAction(action, id) {
-        const service = this.services.find(s => s.id == id);
+        const service = this.allServices.find(s => s.id == id);
         if (!service) return;
 
         if (action === 'edit') {
-            this.view.showModal(service);
+            this.view.openModal(service);
         } else if (action === 'delete') {
             this.view.showConfirmDelete(id, async (idToDelete) => {
                 try {

@@ -17,13 +17,15 @@ export default class WorkerView {
      * Renderiza la vista principal de trabajadores con tarjetas.
      * @param {Array} workers - Array de trabajadores a mostrar.
      */
-    render(workers = []) {
+    render(workers = [], filters = {}) {
+        const isSelected = (val) => (filters.role === val ? 'selected' : '');
+
         this.contentArea.innerHTML = `
             <div class="card fade-in">
                  <!-- Header -->
                 <div class="card-header d-flex justify-content-between align-items-center mb-4 border-bottom pb-3" style="background: transparent;">
                     <div>
-                        <h2 class="h3 mb-1" style="font-family: 'Inter', sans-serif; font-weight: 700; color: #1e293b;">Gestión de Trabajadores</h2>
+                        <h2 class="h3 mb-1 font-weight-bold text-main">Gestión de Trabajadores</h2>
                         <p class="text-secondary small mb-0">Administra los usuarios y permisos del sistema</p>
                     </div>
                     <div class="d-flex gap-3 align-items-center">
@@ -35,9 +37,10 @@ export default class WorkerView {
                                 placeholder="Buscar..." 
                                 class="form-control pl-5"
                                 style="padding-left: 35px; border-radius: 8px; border: 1px solid #e2e8f0;"
+                                value="${filters.search || ''}"
                             >
                         </div>
-                        <button id="newWorkerBtn" class="btn btn-primary d-flex align-items-center gap-2 px-4 shadow-sm" style="border-radius: 8px;">
+                        <button id="newWorkerBtn" class="btn btn-success text-white d-flex align-items-center gap-2 px-4 shadow-sm" style="border-radius: 8px;">
                             <i class="fas fa-plus"></i>
                             <span>Nuevo Trabajador</span>
                         </button>
@@ -49,10 +52,10 @@ export default class WorkerView {
                     <div class="d-flex align-items-center">
                         <label for="filterRole" class="mr-3 font-weight-500 text-secondary mb-0">Filtrar por Rol:</label>
                          <select id="filterRole" class="form-control" style="max-width: 200px;">
-                            <option value="">Todos los roles</option>
-                            <option value="admin">Administrador</option>
-                            <option value="recepcion">Recepción</option>
-                            <option value="mecanico">Mecánico</option>
+                            <option value="" ${isSelected('') || isSelected(null)}>Todos los roles</option>
+                            <option value="admin" ${isSelected('admin')}>Administrador</option>
+                            <option value="recepcionista" ${isSelected('recepcionista')}>Recepción</option>
+                            <option value="mecanico" ${isSelected('mecanico')}>Mecánico</option>
                         </select>
                     </div>
                 </div>
@@ -60,7 +63,7 @@ export default class WorkerView {
                 <!-- Workers Table -->
                 <div class="table-responsive">
                     <table class="table table-hover align-middle mb-0" style="width: 100%;">
-                        <thead style="background-color: #F8FAFC; border-bottom: 2px solid #e2e8f0;">
+                        <thead class="bg-light border-bottom">
                             <tr>
                                 <th class="py-3 px-4 text-uppercase text-secondary text-xs font-weight-bold tracking-wide border-0">Trabajador</th>
                                 <th class="py-3 px-4 text-uppercase text-secondary text-xs font-weight-bold tracking-wide border-0">Rol</th>
@@ -76,6 +79,17 @@ export default class WorkerView {
                 </div>
             </div>
         `;
+
+        // Restore focus if search was active
+        if (filters.search) {
+            requestAnimationFrame(() => {
+                const input = document.getElementById("searchWorkers");
+                if (input) {
+                    input.focus();
+                    input.setSelectionRange(input.value.length, input.value.length);
+                }
+            });
+        }
 
         this.attachEvents();
     }
@@ -105,11 +119,11 @@ export default class WorkerView {
             <tr>
                 <td class="py-3 px-4 border-bottom">
                     <div class="d-flex align-items-center">
-                        <div class="avatar-circle mr-3 bg-light text-primary font-weight-bold d-flex align-items-center justify-content-center rounded-circle" style="width: 36px; height: 36px;">
+                        <div class="avatar-circle mr-3 bg-white text-primary font-weight-bold d-flex align-items-center justify-content-center rounded-circle shadow-sm" style="width: 36px; height: 36px;">
                             ${worker.nombre.charAt(0).toUpperCase()}
                         </div>
                         <div>
-                            <div class="font-weight-bold text-dark" style="font-size: 0.95rem;">${worker.nombre} ${worker.apellido_p || ''}</div>
+                            <div class="font-weight-bold text-main" style="font-size: 0.95rem;">${worker.nombre} ${worker.apellido_p || ''}</div>
                             <div class="small text-secondary">${worker.correo || 'N/A'}</div>
                         </div>
                     </div>
@@ -120,7 +134,7 @@ export default class WorkerView {
                     </span>
                 </td>
                 <td class="py-3 px-4 border-bottom">
-                    <div class="small text-dark"><i class="fas fa-mobile-alt text-secondary mr-2"></i>${worker.celular || 'No registrado'}</div>
+                    <div class="small text-main"><i class="fas fa-mobile-alt text-secondary mr-2"></i>${worker.celular || 'No registrado'}</div>
                 </td>
                 <td class="py-3 px-4 border-bottom text-secondary font-weight-500">
                     ID: ${worker.id}
@@ -157,32 +171,32 @@ export default class WorkerView {
                             
                             <div class="form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
                                 <div class="form-group">
-                                    <label for="nombre" style="display: block; margin-bottom: 0.5rem; font-weight: 500; font-family: 'Inter', sans-serif;">Nombre *</label>
+                                    <label for="nombre" class="form-label text-dark font-weight-bold">Nombre *</label>
                                     <input type="text" id="nombre" class="form-control" required value="${worker?.nombre || ''}" style="width: 100%;">
                                 </div>
                                 <div class="form-group">
-                                    <label for="apellidoP" style="display: block; margin-bottom: 0.5rem; font-weight: 500; font-family: 'Inter', sans-serif;">Apellido Paterno *</label>
+                                    <label for="apellidoP" class="form-label text-dark font-weight-bold">Apellido Paterno *</label>
                                     <input type="text" id="apellidoP" class="form-control" required value="${worker?.apellido_p || ''}" style="width: 100%;">
                                 </div>
                                 <div class="form-group">
-                                    <label for="apellidoM" style="display: block; margin-bottom: 0.5rem; font-weight: 500; font-family: 'Inter', sans-serif;">Apellido Materno</label>
+                                    <label for="apellidoM" class="form-label text-dark font-weight-bold">Apellido Materno</label>
                                     <input type="text" id="apellidoM" class="form-control" value="${worker?.apellido_m || ''}" style="width: 100%;">
                                 </div>
                                 <div class="form-group">
-                                    <label for="rolNombre" style="display: block; margin-bottom: 0.5rem; font-weight: 500; font-family: 'Inter', sans-serif;">Rol *</label>
+                                    <label for="rolNombre" class="form-label text-dark font-weight-bold">Rol *</label>
                                     <select id="rolNombre" class="form-control" required style="width: 100%;">
-                                        <option value="recepcion" ${worker?.rol_nombre === 'recepcion' ? 'selected' : ''}>Recepción</option>
+                                        <option value="recepcionista" ${worker?.rol_nombre === 'recepcionista' ? 'selected' : ''}>Recepción</option>
                                         <option value="mecanico" ${worker?.rol_nombre === 'mecanico' ? 'selected' : ''}>Mecánico</option>
                                         <option value="admin" ${worker?.rol_nombre === 'admin' ? 'selected' : ''}>Administrador</option>
                                     </select>
                                 </div>
                                 
                                 <div class="form-group full-width" style="grid-column: 1 / -1;">
-                                    <label for="correo" style="display: block; margin-bottom: 0.5rem; font-weight: 500; font-family: 'Inter', sans-serif;">Correo Electrónico *</label>
+                                    <label for="correo" class="form-label text-dark font-weight-bold">Correo Electrónico *</label>
                                     <input type="email" id="correo" class="form-control" required value="${worker?.correo || ''}" style="width: 100%;">
                                 </div>
                                 <div class="form-group full-width" style="grid-column: 1 / -1;">
-                                    <label for="celular" style="display: block; margin-bottom: 0.5rem; font-weight: 500; font-family: 'Inter', sans-serif;">Celular</label>
+                                    <label for="celular" class="form-label text-dark font-weight-bold">Celular</label>
                                     <input type="tel" id="celular" class="form-control" value="${worker?.celular || ''}" style="width: 100%;">
                                 </div>
 
@@ -191,20 +205,22 @@ export default class WorkerView {
                                 </div>
 
                                 <div class="form-group">
-                                    <label for="password" style="display: block; margin-bottom: 0.5rem; font-weight: 500; font-family: 'Inter', sans-serif;">${isEdit ? 'Nueva Contraseña (opcional)' : 'Contraseña *'}</label>
+                                    <label for="password" class="form-label text-dark font-weight-bold">${isEdit ? 'Nueva Contraseña (opcional)' : 'Contraseña *'}</label>
                                     <input type="password" id="password" class="form-control" ${isEdit ? '' : 'required'} minlength="6" style="width: 100%;">
                                     ${isEdit ? '<small class="text-secondary">Dejar en blanco para mantener la actual</small>' : ''}
                                 </div>
                                 <div class="form-group">
-                                    <label for="confirmPassword" style="display: block; margin-bottom: 0.5rem; font-weight: 500; font-family: 'Inter', sans-serif;">Confirmar Contraseña</label>
+                                    <label for="confirmPassword" class="form-label text-dark font-weight-bold">Confirmar Contraseña</label>
                                     <input type="password" id="confirmPassword" class="form-control" ${isEdit ? '' : 'required'} minlength="6" style="width: 100%;">
                                 </div>
                             </div>
                             
-                            <div class="modal-footer" style="margin-top: 20px; display: flex; justify-content: flex-end; gap: 10px;">
-                                <button type="button" class="btn-secondary modal-close-btn" style="margin-right: 0;">Cancelar</button>
-                                <button type="submit" class="btn-primary">
-                                    <i class="fas fa-save mr-2"></i> Guardar
+                            <div class="modal-footer d-flex justify-content-between align-items-center bg-light border-top-0" style="margin-top: 20px;">
+                                <button type="button" class="btn btn-danger rounded-pill px-4 shadow-sm modal-close" style="height: 45px; display: flex; align-items: center; justify-content: center; background-color: #ef4444; border-color: #ef4444; color: white; font-size: 0.95rem; font-weight: 700;">
+                                    <i class="fas fa-times me-2"></i> Cancelar
+                                </button>
+                                <button type="submit" class="btn btn-primary rounded-pill px-4 shadow-sm" style="height: 45px; display: flex; align-items: center; justify-content: center; background-color: #4f46e5; border-color: #4f46e5; font-size: 0.95rem; font-weight: 700;">
+                                    <i class="fas fa-save me-2"></i> Guardar
                                 </button>
                             </div>
                         </form>
@@ -331,7 +347,7 @@ export default class WorkerView {
         const roleMap = {
             'admin': 'danger',
             'mecanico': 'info',
-            'recepcion': 'warning'
+            'recepcionista': 'warning'
         };
         return roleMap[rol] || 'secondary';
     }
@@ -342,7 +358,7 @@ export default class WorkerView {
     bindWorkerActions(handler) { this.onWorkerAction = handler; }
     bindSearch(handler) { this.onSearch = handler; }
     bindFilterRole(handler) { this.onFilterRole = handler; }
-    
+
     // Legacy compatible methods (empty to prevent errors if controller calls them)
-    bindCloseModal() {} 
+    bindCloseModal() { }
 }

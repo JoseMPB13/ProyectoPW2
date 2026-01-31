@@ -90,8 +90,6 @@ export default class ClientController {
             alert('Cliente actualizado exitosamente');
             this.clients = await this.model.getAll();
             this.view.render(this.clients);
-            // Si el cliente actualizado es el que estaba seleccionado, refrescar detalle
-            this.view.renderClientDetails(this.clients.find(c => c.id == id));
         } catch (error) {
             console.error(error);
             alert('Error al actualizar cliente: ' + error.message);

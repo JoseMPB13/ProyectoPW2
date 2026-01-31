@@ -264,3 +264,17 @@ def get_order_estados():
         return jsonify([e.to_dict() for e in estados]), 200
     except Exception as e:
         return jsonify({"msg": f"Error al obtener estados: {str(e)}"}), 500
+
+# ==============================================================================
+# Endpoint: DEBUG Recalcular Totales
+# ==============================================================================
+@orders_bp.route('/orders/debug-recalculate', methods=['GET'])
+def debug_recalculate():
+    """
+    Endpoint temporal para recalcular totales de todas las órdenes.
+    """
+    try:
+        stats = OrderService.recalculate_all_totals()
+        return jsonify({"msg": "Totales recalculados", "stats": stats}), 200
+    except Exception as e:
+        return jsonify({"msg": f"Error: {str(e)}"}), 500

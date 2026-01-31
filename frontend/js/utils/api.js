@@ -48,7 +48,7 @@ export default class API {
             } catch (e) {
                 errorData = { message: response.statusText };
             }
-            
+
             // Si es error de autenticación (401), podriamos redirigir al login aquí
             if (response.status === 401) {
                 console.warn('No autorizado o sesión expirada. Cerrando sesión...');
@@ -56,12 +56,27 @@ export default class API {
                 localStorage.removeItem('user');
                 // Si tienes acceso a la instancia de la app o AuthController, úsala.
                 // Como esto es una utilidad, podemos forzar recarga o despacho de evento.
-                window.location.reload(); 
+                window.location.reload();
             }
 
-            throw new Error(errorData.message || 'Error en la petición');
+            // Start with a default message
+            let message = 'Error en la petición (DEBUG)';
+            console.log('DEBUG: ErrorData received:', errorData);
+
+            // Check if errorData is an object and has identifying properties
+            if (errorData && typeof errorData === 'object') {
+                if (errorData.message) {
+                    message = errorData.message;
+                } else if (errorData.msg) {
+                    message = errorData.msg;
+                } else if (errorData.error) {
+                    message = errorData.error;
+                }
+            }
+
+            throw new Error(message);
         }
-        
+
         // Retornar null si no hay contenido (ej 204 No Content)
         if (response.status === 204) return null;
 

@@ -30,6 +30,12 @@ export default class DashboardController {
             }
 
             this.view.render(data);
+
+            // Listen for updates from other controllers (e.g. OrderController)
+            window.addEventListener('order-updated', () => {
+                console.log('DashboardController: Refreshing data due to external update...');
+                this.init(); // Reload data
+            });
         } catch (error) {
             console.error('Error inicializando DashboardController:', error);
             this.view.showError('Hubo un problema al conectar con el servidor.');

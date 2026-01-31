@@ -30,19 +30,50 @@ def create_client():
     """
     data = request.get_json()
 
+    first_name = data.get('first_name') or data.get('nombre')
+    last_name = data.get('last_name') or data.get('apellido_p')
+    ci = data.get('ci')
+    
     # Validamos campos obligatorios
-    if not data or not data.get('first_name') or not data.get('last_name'):
-        return jsonify({"msg": "Nombre y Apellido son obligatorios"}), 400
+    if not first_name or not last_name or not ci:
+        return jsonify({"msg": "Nombre, Apellido y CI son obligatorios"}), 400
 
     try:
         new_client = ClientService.create_client(
-            first_name=data['first_name'],
-            last_name=data['last_name'],
-            email=data.get('email'),
-            phone=data.get('phone'),
-            address=data.get('address')
+            first_name=first_name,
+            last_name=last_name,
+            ci=ci,
+            email=data.get('email') or data.get('correo'),
+            phone=data.get('phone') or data.get('celular'),
+            address=data.get('address') or data.get('direccion')
         )
         return jsonify({"msg": "Cliente creado exitosamente", "client": new_client.to_dict()}), 201
+    except ValueError as e:
+        return jsonify({"msg": str(e)}), 400
+    except Exception as e:
+        return jsonify({"msg": f"Error interno: {str(e)}"}), 500
+
+# ==============================================================================
+# Endpoint: Actualizar Cliente
+# ==============================================================================
+@clients_bp.route('/<int:client_id>', methods=['PUT'])
+def update_client(client_id):
+    """
+    Actualiza la información de un cliente.
+    """
+    data = request.get_json()
+    try:
+        updated_client = ClientService.update_client(
+            client_id=client_id,
+            nombre=data.get('nombre') or data.get('first_name'),
+            apellido_p=data.get('apellido_p') or data.get('last_name'),
+            apellido_m=data.get('apellido_m'),
+            ci=data.get('ci'),
+            correo=data.get('correo') or data.get('email'),
+            celular=data.get('celular') or data.get('phone'),
+            direccion=data.get('direccion') or data.get('address')
+        )
+        return jsonify({"msg": "Cliente actualizado exitosamente", "client": updated_client.to_dict()}), 200
     except ValueError as e:
         return jsonify({"msg": str(e)}), 400
     except Exception as e:
@@ -97,6 +128,8 @@ def add_vehicle(client_id):
     # Validaciones de campos obligatorios del vehículo
     required_fields = ['plate', 'brand', 'model', 'year']
     if not data or not all(field in data for field in required_fields):
+        missing = [f for f in required_fields if f not in data]
+        print(f"DEBUG: Faltan campos: {missing}. Data recibida: {data}")
         return jsonify({"msg": f"Faltan datos obligatorios: {', '.join(required_fields)}"}), 400
 
     try:
@@ -110,8 +143,10 @@ def add_vehicle(client_id):
         )
         return jsonify({"msg": "Vehículo agregado exitosamente", "vehicle": new_vehicle.to_dict()}), 201
     except ValueError as e:
+        print(f"DEBUG: ValueError en add_vehicle: {e}")
         return jsonify({"msg": str(e)}), 400
     except Exception as e:
+        print(f"DEBUG: Exception en add_vehicle: {e}")
         return jsonify({"msg": f"Error interno: {str(e)}"}), 500
 
 # ==============================================================================

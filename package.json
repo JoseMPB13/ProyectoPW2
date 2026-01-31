@@ -1,0 +1,14 @@
+{
+  "name": "proyecto2-frontend",
+  "version": "1.0.0",
+  "description": "Frontend para proyecto2",
+  "main": "index.html",
+  "scripts": {
+    "start": "npx serve frontend"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "serve": "^14.2.5"
+  }
+}

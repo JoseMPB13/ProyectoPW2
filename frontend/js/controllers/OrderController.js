@@ -18,7 +18,7 @@ export default class OrderController {
         this.paymentView = new PaymentView();
         this.api = new API();
         this.vehicleModel = new VehicleModel(this.api);
-        this.clientModel = new ClientModel(); // ClientModel usually instantiates its own API or uses singleton. I'll verify.
+        this.clientModel = new ClientModel();
         
         // Estado
         this.orders = [];
@@ -26,6 +26,10 @@ export default class OrderController {
             page: 1,
             total: 0,
             pages: 1
+        };
+        this.currentFilters = {
+            search: '',
+            estadoId: null
         };
         
         // Vincular eventos
@@ -49,15 +53,16 @@ export default class OrderController {
     /**
      * Carga las órdenes desde el servidor.
      */
-    async loadOrders(page = 1, filters = {}) {
+    async loadOrders(page = 1) {
         try {
             this.view.showLoading();
-            const queryParams = {
-                page,
-                per_page: 10,
-                ...filters
-            };
-            const response = await this.model.getOrders(queryParams.page, queryParams.per_page);
+            // Mantener página actual si no se especifica, pero si cambiaron filtros (usualmente se llama con 1)
+            const targetPage = page || this.pagination.page;
+
+            const { search, estadoId } = this.currentFilters;
+            const perPage = 10;
+
+            const response = await this.model.getOrders(targetPage, perPage, estadoId, search);
             
             this.orders = response.items || [];
             this.pagination = {
@@ -66,14 +71,21 @@ export default class OrderController {
                 total: response.total || 0
             };
             
-            this.view.render(this.orders, this.pagination);
+            // Pass current filters to render to persist UI state
+            this.view.render(this.orders, this.pagination, this.currentFilters);
+            
         } catch (error) {
             console.error('Error cargando órdenes:', error);
             Toast.error('Error al cargar órdenes. Intente nuevamente.');
-            this.view.render([], {}); // Render empty list on error
+            this.view.render([], {}, this.currentFilters); 
         } finally {
             this.view.hideLoading();
+            // restoreFilterUI is no longer needed as render handles it
         }
+    }
+
+    restoreFilterUI() {
+        // Deprecated by render update
     }
 
     /**
@@ -92,8 +104,6 @@ export default class OrderController {
                 break;
             case 'delete':
                 if (confirm('¿Está seguro de eliminar esta orden?')) {
-                     // Nota: No implementamos delete en backend todavía para órdenes,
-                     // pero si lo hiciéramos, iría aquí.
                      alert('Funcionalidad de eliminar orden no disponible por seguridad.');
                 }
                 break;
@@ -125,10 +135,8 @@ export default class OrderController {
     async editOrder(id) {
         try {
             this.view.showLoading();
-            // Cargar la orden
             const order = await this.model.getOrderById(id);
             
-            // Cargar datos para los dropdowns. Incluir Clientes y Vehículos para edición completa
             const [tecnicos, estados, servicios, repuestos, clients, vehicles] = await Promise.all([
                 this.loadTecnicos(),
                 this.loadEstados(),
@@ -160,7 +168,7 @@ export default class OrderController {
     async handleSubmitEdit(orderId, formData) {
         try {
             await this.model.updateOrder(orderId, formData);
-            await this.loadOrders();
+            await this.loadOrders(this.pagination.page); // Reload current page
         } catch (error) {
             console.error('Error al actualizar orden:', error);
             alert('No se pudo actualizar la orden');
@@ -171,9 +179,7 @@ export default class OrderController {
      * Muestra el formulario para crear una nueva orden.
      */
     async handleNewOrder() {
-        console.log('OrderController: handleNewOrder started');
         try {
-            console.log('OrderController: Loading data...');
             const [tecnicos, vehicles, clients, estados, servicios, repuestos] = await Promise.all([
                 this.loadTecnicos(),
                 this.loadVehicles(),
@@ -182,14 +188,6 @@ export default class OrderController {
                 this.loadServicios(),
                 this.loadRepuestos()
             ]);
-            console.log('OrderController: Data loaded', { 
-                tecnicos: tecnicos.length, 
-                vehicles: vehicles.length, 
-                clients: clients.length, 
-                estados: estados.length,
-                servicios: servicios.length,
-                repuestos: repuestos.length
-            });
 
             this.view.showNewOrderModal({
                 tecnicos,
@@ -199,7 +197,6 @@ export default class OrderController {
                 servicios,
                 repuestos
             });
-            console.log('OrderController: Modal shown');
         } catch (error) {
             console.error('OrderController: Error in handleNewOrder:', error);
             alert('No se pudo cargar el formulario: ' + error.message);
@@ -211,11 +208,32 @@ export default class OrderController {
      */
     async handleSubmitNewOrder(formData) {
         try {
-            await this.model.createOrder(formData);
-            await this.loadOrders();
+            if (!formData.cliente_id || !formData.auto_id) {
+                Toast.error('Cliente y Vehículo son obligatorios');
+                return;
+            }
+
+            const orderData = {
+                ...formData,
+                cliente_id: parseInt(formData.cliente_id),
+                auto_id: parseInt(formData.auto_id),
+                tecnico_id: formData.tecnico_id ? parseInt(formData.tecnico_id) : null,
+                estado_id: formData.estado_id ? parseInt(formData.estado_id) : null,
+                total_estimado: parseFloat(formData.total_estimado) || 0
+            };
+
+            if (!orderData.estado_id) {
+                Toast.error('Error: Debe seleccionarse un estado válido.');
+                return;
+            }
+
+            await this.model.createOrder(orderData);
+            Toast.success('Orden creada correctamente');
+            await this.loadOrders(1); // Go to first page
+
         } catch (error) {
             console.error('Error al crear orden:', error);
-            alert('No se pudo crear la orden: ' + (error.message || 'Error desconocido'));
+            Toast.error('Error al crear orden: ' + (error.message || 'Error desconocido'));
         }
     }
 
@@ -223,72 +241,59 @@ export default class OrderController {
      * Maneja el cambio de página.
      */
     async handlePageChange(direction) {
-        if (direction === 'prev' && this.currentPage > 1) {
-            this.currentPage--;
-            await this.loadOrders();
-        } else if (direction === 'next') {
-            this.currentPage++;
-            await this.loadOrders();
+        if (direction === 'prev' && this.pagination.page > 1) {
+            await this.loadOrders(this.pagination.page - 1);
+        } else if (direction === 'next' && this.pagination.page < this.pagination.pages) {
+            await this.loadOrders(this.pagination.page + 1);
         }
     }
 
     /**
      * Maneja el filtro por estado.
      */
-    handleFilter(estado) {
-        // Por ahora el filtrado es local en la vista,
-        // pero aquí podríamos implementar filtrado en servidor.
-        console.log('Filtro estado:', estado);
+    async handleFilter(estadoNombre) {
+        // Convert Name to ID
+        this.currentFilters.estadoNombre = estadoNombre || ''; // Store name for UI restoration
+
+        if (!estadoNombre) {
+            this.currentFilters.estadoId = null;
+        } else {
+            try {
+                // We need the ID. We'll fetch statuses to find it.
+                // Ideally we should cache this list.
+                const estados = await this.loadEstados();
+                const found = estados.find(e => e.nombre_estado === estadoNombre);
+                this.currentFilters.estadoId = found ? found.id : null;
+                
+                if (!found) console.warn('Filter logic: Estado not found for name:', estadoNombre);
+            } catch (e) {
+                console.error('Error filtering:', e);
+            }
+        }
+        await this.loadOrders(1);
     }
 
     /**
      * Maneja la búsqueda.
      */
     handleSearch(query) {
-        const searchTerm = query.toLowerCase().trim();
-        
-        // Si el input está vacío, restaurar lista completa
-        if (!searchTerm) {
-            this.view.updateOrderList(this.orders);
-            return;
-        }
-
-        // Filtrar lista local (this.orders tiene la página actual cargada, 
-        // idealmente sería sobre TODO el dataset si fuera pequeño, pero el requisito dice "lista local")
-        // Nota: Si se requiere buscar en TODAS las órdenes del servidor, se necesitaría llamar a la API.
-        // El requisito dice "Si hay texto, filtra la lista local (this.orders, etc.)".
-        
-        const filtered = this.orders.filter(order => {
-            const placa = (order.placa || '').toLowerCase();
-            const cliente = (order.cliente_nombre || '').toLowerCase();
-            const tecnico = (order.tecnico_nombre || '').toLowerCase();
-            const marca = (order.marca || '').toLowerCase();
-            const modelo = (order.modelo || '').toLowerCase();
-            const id = (order.id || '').toString();
-
-            return placa.includes(searchTerm) ||
-                   cliente.includes(searchTerm) ||
-                   tecnico.includes(searchTerm) ||
-                   marca.includes(searchTerm) ||
-                   modelo.includes(searchTerm) ||
-                   id.includes(searchTerm);
-        });
-
-        this.view.updateOrderList(filtered);
+        // Debounce could be added here
+        this.currentFilters.search = query || '';
+        this.loadOrders(1);
     }
 
     /**
      * Carga la lista de técnicos.
      */
     async loadTecnicos() {
-        console.log('OrderController: loadTecnicos started');
         try {
             const response = await this.api.get('/auth/users?per_page=100');
-            console.log('OrderController: loadTecnicos response', response);
-            const users = response.items || response || [];
-            
-            // Filtrar solo mecánicos
-            return users.filter(u => u.rol_nombre === 'mecanico' || u.rol_nombre === 'admin');
+            const users = response.items            // Filtrar solo mecánicos (estrictamente rol de técnico)
+                || response || [];
+            return users.filter(u => {
+                const rol = (u.rol_nombre || '').toLowerCase();
+                return rol === 'mecanico';
+            });
         } catch (error) {
             console.error('OrderController: Error al cargar técnicos:', error);
             return [];
@@ -299,10 +304,8 @@ export default class OrderController {
      * Carga la lista de vehículos.
      */
     async loadVehicles() {
-        console.log('OrderController: loadVehicles started');
         try {
             const result = await this.vehicleModel.getAll();
-            console.log('OrderController: loadVehicles result', result);
             return result;
         } catch (error) {
             console.error('OrderController: Error al cargar vehículos:', error);
@@ -340,7 +343,7 @@ export default class OrderController {
      */
     async loadRepuestos() {
         try {
-            const response = await this.api.get('/inventory/parts'); // Verifying route name...
+            const response = await this.api.get('/inventory/parts');
             return response.items || response || [];
         } catch (error) {
             console.error('Error al cargar repuestos:', error);
@@ -348,9 +351,6 @@ export default class OrderController {
         }
     }
 
-    /**
-     * Carga la lista de clientes.
-     */
     /**
      * Carga la lista de clientes.
      */
@@ -374,14 +374,16 @@ export default class OrderController {
             
             const paymentData = {
                 ...balance,
-                // CRUCIAL: Mapear estado_orden (backend) a estado_nombre (frontend view)
                 estado_nombre: balance.estado_orden || order.estado_nombre || '',
                 cliente_nombre: order.cliente_nombre || 'Cliente',
                 id: orderId,
-                total_estimado: balance.total_estimado, // Asegurar compatibilidad
+                total_estimado: balance.total_estimado,
                 total_pagado: balance.total_pagado,
                 saldo_pendiente: balance.saldo_pendiente,
-                pagos: balance.pagos
+                pagos: balance.pagos,
+                placa: order.placa,
+                marca: order.marca,
+                modelo: order.modelo
             };
 
             this.showPaymentModal(paymentData);
@@ -394,12 +396,10 @@ export default class OrderController {
     showPaymentModal(orderData) {
         if (!this.paymentView) this.paymentView = new PaymentView();
         
-        // Enlazar el evento de envío
         this.paymentView.onSubmitPayment = async (paymentDetails) => {
             await this.processPayment(paymentDetails);
         };
         
-        // Mostrar el modal
         this.paymentView.showPaymentModal(orderData);
     }
 
@@ -408,29 +408,26 @@ export default class OrderController {
             await this.api.post('/payments/', details);
             Toast.success('Pago registrado exitosamente');
             
-            // Verificar si se completó el pago
             const balance = await this.api.get(`/payments/order/${details.orden_id}/balance`);
             
             if (balance.pagado_completamente) {
-                // Preguntar si desea cambiar a Entregado
-                if (confirm('✅ ¡Pago Completado!\n\nLa orden ha sido pagada en su totalidad.\n¿Desea marcar la orden como "Entregado" y finalizar el proceso?')) {
-                    try {
-                        // Buscar ID del estado Entregado
-                        const estados = await this.api.get('/orders/estados');
-                        const estadoEntregado = estados.find(e => e.nombre_estado === 'Entregado');
-                        
-                        if (estadoEntregado) {
-                            await this.api.put(`/orders/${details.orden_id}/status`, { estado_id: estadoEntregado.id });
-                            Toast.success('Orden marcada como Entregada');
-                        }
-                    } catch (err) {
-                        console.error('Error al cambiar estado:', err);
-                        Toast.error('Pago registrado, pero hubo error al cambiar estado');
+                try {
+                    const estados = await this.api.get('/orders/estados');
+                    const estadoEntregado = estados.find(e => e.nombre_estado === 'Entregado') ||
+                                          estados.find(e => e.nombre_estado === 'Finalizado');
+                    
+                    if (estadoEntregado) {
+                        await this.api.put(`/orders/${details.orden_id}/status`, { estado_id: estadoEntregado.id });
+                        Toast.success('Orden marcada como Entregada automáticamente');
                     }
+                } catch (err) {
+                    console.error('Error al cambiar estado automáticamente:', err);
                 }
             }
             
-            await this.loadOrders(); 
+            await this.loadOrders(this.pagination.page);
+            window.dispatchEvent(new Event('order-updated'));
+
             return { success: true };
         } catch (error) {
             console.error('Error al procesar pago:', error);

@@ -78,12 +78,28 @@ def login():
         JSON: Token de acceso y datos del usuario.
     """
     data = request.get_json()
+    
+    # DEBUG: Write to file
+    try:
+        with open("login_debug.txt", "a") as f:
+            f.write(f"Login Attempt: {data}\n")
+    except Exception as e:
+        print(f"Error writing to log: {e}")
+
     print(f"DEBUG: Login Attempt: {data}", flush=True)
 
     if not data or not data.get('email') or not data.get('password'):
         return jsonify({"msg": "Faltan credenciales"}), 400
 
     result = AuthService.login_user(data['email'], data['password'])
+    
+    # DEBUG: Write result
+    try:
+        with open("login_debug.txt", "a") as f:
+            f.write(f"Login Result for {data.get('email')}: {'SUCCESS' if result else 'FAILED'}\n")
+    except:
+        pass
+
     print(f"DEBUG: Login Result: {result is not None}", flush=True)
 
     if not result:

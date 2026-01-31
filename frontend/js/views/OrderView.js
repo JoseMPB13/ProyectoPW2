@@ -20,42 +20,45 @@ export default class OrderView {
   }
 
   showLoading() {
-      // Create spinner if not exists
-      let overlay = document.querySelector('.loading-overlay');
-      if (!overlay) {
-          overlay = document.createElement('div');
-          overlay.className = 'loading-overlay';
-          overlay.innerHTML = '<div class="spinner"></div>';
-          document.body.appendChild(overlay);
-      }
-      overlay.style.display = 'flex';
-      
-      // Disable all buttons
-      document.querySelectorAll('button').forEach(btn => btn.disabled = true);
+    // Create spinner if not exists
+    let overlay = document.querySelector('.loading-overlay');
+    if (!overlay) {
+      overlay = document.createElement('div');
+      overlay.className = 'loading-overlay';
+      overlay.innerHTML = '<div class="spinner"></div>';
+      document.body.appendChild(overlay);
+    }
+    overlay.style.display = 'flex';
+
+    // Disable all buttons
+    document.querySelectorAll('button').forEach(btn => btn.disabled = true);
   }
 
   hideLoading() {
-      const overlay = document.querySelector('.loading-overlay');
-      if (overlay) overlay.style.display = 'none';
-      
-      // Enable all buttons
-      document.querySelectorAll('button').forEach(btn => btn.disabled = false);
+    const overlay = document.querySelector('.loading-overlay');
+    if (overlay) overlay.style.display = 'none';
+
+    // Enable all buttons
+    document.querySelectorAll('button').forEach(btn => btn.disabled = false);
   }
 
   /**
    * Renderiza la vista principal de órdenes.
    */
-  render(orders = [], pagination = {}) {
+  render(orders = [], pagination = {}, filters = {}) {
     this.currentOrders = orders;
     this.filteredOrders = orders;
+
+    // Helper to determine if an option is selected
+    const isSelected = (val) => (filters.estadoNombre === val ? 'selected' : '');
 
     this.contentArea.innerHTML = `
             <div class="card fade-in">
                 <!-- Header -->
                 <div class="card-header d-flex justify-content-between align-items-center mb-4 border-bottom pb-3" style="background: transparent;">
                     <div>
-                        <h2 class="h3 mb-1" style="font-family: 'Inter', sans-serif; font-weight: 700; color: #1e293b;">Gestión de Órdenes</h2>
-                        <p class="text-secondary small mb-0">Administra y da seguimiento a las órdenes de servicio</p>
+                        <h2 class="h3 mb-1 font-weight-bold text-main">Gestión de Órdenes</h2>
+                        <p class="text-muted small mb-0">Administra y da seguimiento a las órdenes de servicio</p>
                     </div>
                     <div class="d-flex gap-3 align-items-center">
                          <div class="search-wrapper position-relative">
@@ -64,11 +67,12 @@ export default class OrderView {
                                 type="text" 
                                 id="searchOrders" 
                                 placeholder="Buscar..." 
-                                class="form-control pl-5"
-                                style="padding-left: 35px; border-radius: 8px; border: 1px solid #e2e8f0;"
+                                class="form-control pl-5 bg-input text-main"
+                                style="padding-left: 35px; border-radius: 8px;"
+                                value="${filters.search || ''}"
                             >
                         </div>
-                        <button id="newOrderBtn" class="btn btn-primary d-flex align-items-center gap-2 px-4 shadow-sm" style="border-radius: 8px;">
+                        <button id="newOrderBtn" class="btn btn-success text-white d-flex align-items-center gap-2 px-4 shadow-sm" style="border-radius: 8px;">
                             <i class="fas fa-plus"></i>
                             <span>Nueva Orden</span>
                         </button>
@@ -76,26 +80,40 @@ export default class OrderView {
                 </div>
 
                 <!-- Filters Bar (Secondary) -->
-                <div class="filters-bar mb-4 bg-light p-3 rounded border">
+                <div class="filters-bar mb-4 bg-card p-3 rounded border">
                     <div class="d-flex align-items-center">
-                        <label for="filterEstado" class="mr-3 font-weight-500 text-secondary mb-0">Filtrar por Estado:</label>
-                        <select id="filterEstado" class="form-control" style="max-width: 200px;">
-                            <option value="">Todos los estados</option>
-                            <option value="Pendiente">Pendiente</option>
-                            <option value="En Proceso">En Proceso</option>
-                            <option value="Finalizado">Finalizado</option>
-                            <option value="Entregado">Entregado</option>
+                        <label for="filterEstado" class="mr-3 font-weight-500 text-muted mb-0">Filtrar por Estado:</label>
+                        <select id="filterEstado" class="form-control bg-input text-main" style="max-width: 200px;">
+                            <option value="" ${isSelected('')}>Todos los estados</option>
+                            <option value="Pendiente" ${isSelected('Pendiente')}>Pendiente</option>
+                            <option value="En Proceso" ${isSelected('En Proceso')}>En Proceso</option>
+                            <option value="Finalizado" ${isSelected('Finalizado')}>Finalizado</option>
+                            <option value="Entregado" ${isSelected('Entregado')}>Entregado</option>
                         </select>
-                        <button id="clearFilters" class="btn btn-link text-secondary ml-3" style="text-decoration: none;">
-                            <i class="fas fa-undo-alt mr-1"></i> Limpiar
-                        </button>
                     </div>
                 </div>
 
-                <!-- Orders Grid -->
-                <div id="ordersGrid" class="services-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.5rem;">
-                    ${this.renderOrderCards(orders)}
+                <!-- Orders Table -->
+                <div class="order-table-container">
+                    <table class="order-table data-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Cliente</th>
+                                <th>Vehículo</th>
+                                <th>Técnico</th>
+                                <th>Fecha Ingreso</th>
+                                <th>Total Est.</th>
+                                <th>Estado</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ordersTableBody">
+                           ${this.renderOrderTableRows(orders)}
+                        </tbody>
+                    </table>
                 </div>
+
 
                 <!-- Pagination -->
                 <div class="mt-4 border-top pt-3">
@@ -104,6 +122,17 @@ export default class OrderView {
             </div>
         `;
 
+    // Restore focus if search was active
+    if (filters.search) {
+        requestAnimationFrame(() => {
+            const input = this.contentArea.querySelector("#searchOrders");
+            if (input) {
+                input.focus();
+                input.setSelectionRange(input.value.length, input.value.length);
+            }
+        });
+    }
+
     // Attach events to the newly created view root
     const viewRoot = this.contentArea.querySelector(".card");
     if (viewRoot) {
@@ -111,91 +140,61 @@ export default class OrderView {
     }
   }
 
-  /**
-   * Adjunta eventos a la raíz de la vista usando delegación.
-   */
   attachViewEvents(viewRoot) {
-    console.log("OrderView: Attaching view events to", viewRoot);
-    // Delegación de clicks (Acciones, Nueva Orden, Paginación, Limpiar Filtros)
-    viewRoot.addEventListener("click", (e) => {
-      console.log("OrderView: Click detected on", e.target);
-      // 1. Botones de acción (Ver, Editar, etc.)
-      const actionBtn = e.target.closest("[data-action]");
-      if (actionBtn) {
-        console.log(
-          "OrderView: Action button clicked",
-          actionBtn.dataset.action,
-        );
-        const action = actionBtn.dataset.action;
-        const id = actionBtn.dataset.id;
-        if (this.onAction) {
-          this.onAction(action, id);
-        } else {
-          console.error("OrderView: No onAction handler bound");
-        }
-        return;
-      }
+    // New Order Button
+    const newOrderBtn = viewRoot.querySelector("#newOrderBtn");
+    if (newOrderBtn) {
+      newOrderBtn.addEventListener("click", () => {
+        if (this.onNewOrder) this.onNewOrder();
+      });
+    }
 
-      // 2. Nueva Orden
-      const newOrderBtn = e.target.closest("#newOrderBtn");
-      if (newOrderBtn) {
-        console.log("OrderView: New Order button clicked");
-        if (this.onNewOrder) {
-          this.onNewOrder();
-        } else {
-          console.error("OrderView: No onNewOrder handler bound");
-        }
-        return;
-      }
-      // ... (rest of the code)
-
-      // 3. Paginación
-      const prevBtn = e.target.closest("#prevPage");
-      if (prevBtn && !prevBtn.disabled) {
-        if (this.onPageChange) this.onPageChange("prev");
-        return;
-      }
-
-      const nextBtn = e.target.closest("#nextPage");
-      if (nextBtn && !nextBtn.disabled) {
-        if (this.onPageChange) this.onPageChange("next");
-        return;
-      }
-
-      // 4. Limpiar Filtros
-      const clearBtn = e.target.closest("#clearFilters");
-      if (clearBtn) {
-        this.clearFilters();
-        return;
-      }
-    });
-
-    // Eventos de input/change (Búsqueda, Filtro Estado)
+    // Search
     const searchInput = viewRoot.querySelector("#searchOrders");
     if (searchInput) {
       searchInput.addEventListener("input", (e) => {
-        this.handleSearch(e.target.value);
-        // También notificar al controlador si es necesario, pero aquí manejamos el filtro localmente primero
         if (this.onSearch) this.onSearch(e.target.value);
       });
     }
 
-    const filterEstado = viewRoot.querySelector("#filterEstado");
-    if (filterEstado) {
-      filterEstado.addEventListener("change", (e) => {
-        this.handleFilter(e.target.value);
+    // Filters
+    const filterSelect = viewRoot.querySelector("#filterEstado");
+    if (filterSelect) {
+      filterSelect.addEventListener("change", (e) => {
         if (this.onFilter) this.onFilter(e.target.value);
       });
     }
-  }
 
-  // ... (renderOrderCards, renderPagination methods remain unchanged)
+    // Clear Filters logic removed as requested by user
 
-  /**
-   * Métodos Binding
-   */
-  bindAction(handler) {
-    this.onAction = handler;
+    // Pagination
+    const prevBtn = viewRoot.querySelector("#prevPage");
+    const nextBtn = viewRoot.querySelector("#nextPage");
+
+    if (prevBtn) {
+      prevBtn.addEventListener("click", () => {
+        if (this.onPageChange) this.onPageChange("prev");
+      });
+    }
+
+    if (nextBtn) {
+      nextBtn.addEventListener("click", () => {
+        if (this.onPageChange) this.onPageChange("next");
+      });
+    }
+
+    // Table Actions Delegation
+    const tableBody = viewRoot.querySelector("#ordersTableBody");
+    if (tableBody) {
+      tableBody.addEventListener("click", (e) => {
+        const btn = e.target.closest("button");
+        if (btn && btn.dataset.action) {
+          const action = btn.dataset.action;
+          const id = btn.dataset.id;
+          if (this.onAction) this.onAction(action, id);
+        }
+      });
+    }
   }
 
   bindNewOrder(handler) {
@@ -214,134 +213,83 @@ export default class OrderView {
     this.onSearch = handler;
   }
 
-  // ... existing bindSubmitEdit, bindSubmitNewOrder ...
 
   /**
-   * Limpia todos los filtros.
+   * Renderiza las filas de la tabla de órdenes using logic similar to RenderOrderCards but for table.
    */
-  clearFilters() {
-    const searchInput = document.getElementById("searchOrders");
-    const filterSelect = document.getElementById("filterEstado");
+  renderOrderTableRows(orders) {
+    if (!orders || orders.length === 0) {
+      return `
+            <tr>
+                <td colspan="8">
+                    <div class="empty-state-container">
+                        <div class="mb-3">
+                             <i class="fas fa-clipboard-list text-muted fa-3x"></i>
+                        </div>
+                        <h4 class="font-weight-bold mb-2 text-main">No hay órdenes registradas</h4>
+                        <p class="text-muted mb-4">Comienza creando una nueva orden de servicio</p>
+                        <button class="btn btn-primary px-4 py-2 shadow-sm rounded-pill" onclick="document.getElementById('newOrderBtn').click()">
+                            <i class="fas fa-plus mr-2"></i> Nueva Orden
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `;
+    }
 
-    if (searchInput) searchInput.value = "";
-    if (filterSelect) filterSelect.value = "";
+    return orders.map(order => {
+      // Status Badge Logic
+      let statusClass = 'secondary';
+      const s = (order.estado_nombre || '').toLowerCase();
+      if (s.includes('pendiente')) statusClass = 'pendiente';
+      else if (s.includes('proceso')) statusClass = 'proceso';
+      else if (s.includes('finaliz') || s.includes('entregado') || s.includes('completado')) statusClass = 'finalizado';
+      else if (s.includes('cancel')) statusClass = 'cancelado';
 
-    this.filteredOrders = this.currentOrders;
-    this.updateOrdersGrid();
-
-    // Notificar reset si el controlador necesita recargar datos originales
-    if (this.onSearch) this.onSearch("");
+      return `
+            <tr>
+                <td class="font-weight-bold text-main">#${order.id}</td>
+                <td>
+                    <div class="font-weight-500">${order.cliente_nombre || 'Sin Cliente'}</div>
+                </td>
+                <td>
+                    <div class="font-weight-500">${order.placa || 'N/A'}</div>
+                    <div class="text-xs text-muted">${order.marca || ''} ${order.modelo || ''}</div>
+                </td>
+                <td>
+                    <div class="font-weight-500 text-secondary">${order.tecnico_nombre || 'Sin Asignar'}</div>
+                </td>
+                <td>
+                    <i class="far fa-calendar-alt text-muted mr-1"></i>
+                    ${this.formatDate(order.fecha_ingreso)}
+                </td>
+                <td class="font-weight-bold">
+                    Bs. ${this.formatCurrency(order.total_estimado)}
+                </td>
+                <td>
+                    <span class="badge-status ${statusClass}">
+                        ${order.estado_nombre || 'Pendiente'}
+                    </span>
+                </td>
+                <td>
+                    <div class="btn-group" role="group">
+                        <button class="btn btn-sm btn-outline-primary mr-1 btn-view" data-action="view" data-id="${order.id}" title="Ver Detalle">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-secondary mr-1 btn-edit" data-action="edit" data-id="${order.id}" title="Editar">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        ${(s.includes('finaliz') || s.includes('entregado') || s.includes('completado')) ? `
+                        <button class="btn btn-sm btn-outline-success btn-pay" data-action="payment" data-id="${order.id}" title="Cobrar">
+                            <i class="fas fa-money-bill-wave"></i>
+                        </button>
+                        ` : ''}
+                    </div>
+                </td>
+            </tr>
+        `;
+    }).join('');
   }
-
-    updateOrdersGrid() {
-        const grid = document.getElementById('ordersGrid');
-        if (grid) {
-            grid.innerHTML = this.renderOrderCards(this.filteredOrders);
-        }
-    }
-
-  /**
-   * Renderiza las tarjetas de órdenes.
-   */
-    /**
-     * Renderiza las tarjetas de órdenes.
-     */
-    /**
-     * Renderiza las tarjetas de órdenes estilo "Ticket Empresarial".
-     */
-    renderOrderCards(orders) {
-        if (!orders || orders.length === 0) {
-            return `
-                <div class="empty-state d-flex flex-column align-items-center justify-content-center py-5" style="grid-column: 1 / -1;">
-                    <div class="bg-light rounded-circle d-flex align-items-center justify-content-center mb-3" style="width: 80px; height: 80px;">
-                        <i class="fas fa-clipboard-list text-secondary fa-2x"></i>
-                    </div>
-                    <h4 class="text-dark font-weight-bold mb-2">No hay órdenes registradas</h4>
-                    <p class="text-secondary mb-4">Comienza creando una nueva orden de servicio</p>
-                    <button class="btn btn-primary px-4 py-2 shadow-sm rounded-pill transition-transform hover-scale" onclick="document.getElementById('newOrderBtn').click()">
-                        <i class="fas fa-plus mr-2"></i> Nueva Orden
-                    </button>
-                </div>
-            `;
-        }
-
-        return orders.map(order => {
-             // Status Badge Class Logic
-            let badgeClass = 'secondary';
-            const status = (order.estado_nombre || '').toLowerCase();
-            if (status.includes('finaliz') || status.includes('entregado') || status.includes('completado')) {
-                badgeClass = 'success';
-            } else if (status.includes('pendiente') || status.includes('proceso')) {
-                badgeClass = 'warning';
-            } else if (status.includes('cancel')) {
-                badgeClass = 'danger';
-            }
-
-            return `
-            <div class="order-card card bg-white border shadow-sm hover-shadow-md transition-all rounded-lg overflow-hidden h-100 d-flex flex-column" data-id="${order.id}">
-                <div class="card-body p-0 d-flex flex-column h-100">
-                    
-                    <!-- Card Header -->
-                    <div class="d-flex justify-content-between align-items-center p-3 border-bottom bg-light bg-opacity-50">
-                        <h3 class="h6 font-weight-bold text-dark mb-0">Orden #${order.id}</h3>
-                        <span class="badge badge-${badgeClass} px-2 py-1 rounded-pill small font-weight-bold text-uppercase" style="font-size: 0.7rem; letter-spacing: 0.5px;">
-                            ${order.estado_nombre || "Pendiente"}
-                        </span>
-                    </div>
-
-                    <!-- Card Body Grid -->
-                    <div class="p-3 flex-grow-1">
-                        <div class="" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-                            <!-- Vehicle -->
-                            <div class="d-flex align-items-start gap-2 mb-2 p-2 rounded hover-bg-light transition-colors" style="grid-column: 1 / -1;">
-                                <div class="mt-1 text-primary"><i class="fas fa-car"></i></div>
-                                <div>
-                                    <div class="font-weight-bold text-dark text-sm">${order.placa || "N/A"}</div>
-                                    <div class="text-xs text-secondary">${order.marca || "Marca"} ${order.modelo || ""}</div>
-                                </div>
-                            </div>
-                            
-                            <!-- Client -->
-                             <div class="d-flex align-items-center gap-2 mb-1">
-                                <i class="fas fa-user text-secondary text-xs" style="width: 16px; text-align: center;"></i>
-                                <span class="text-sm text-dark text-truncate" title="${order.cliente_nombre}">${order.cliente_nombre || "Sin Cliente"}</span>
-                            </div>
-
-                             <!-- Tech -->
-                             <div class="d-flex align-items-center gap-2 mb-1">
-                                <i class="fas fa-wrench text-secondary text-xs" style="width: 16px; text-align: center;"></i>
-                                <span class="text-sm text-secondary text-truncate">${order.tecnico_nombre ? order.tecnico_nombre.split(' ')[0] : "Sin Asig."}</span>
-                            </div>
-
-                             <!-- Date -->
-                             <div class="d-flex align-items-center gap-2" style="grid-column: 1 / -1;">
-                                <i class="fas fa-calendar-alt text-secondary text-xs" style="width: 16px; text-align: center;"></i>
-                                <span class="text-xs text-secondary">Ingreso: ${this.formatDate(order.fecha_ingreso).split(' ')[0]}</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Card Footer -->
-                    <div class="d-flex justify-content-between align-items-center p-3 border-top mt-auto">
-                        <div class="font-weight-bold text-dark h6 mb-0">Bs. ${this.formatCurrency(order.total_estimado)}</div>
-                        
-                        <div class="d-flex gap-1">
-                             <button class="btn btn-icon btn-sm text-secondary hover-text-primary rounded-circle d-flex align-items-center justify-content-center" style="width: 32px; height: 32px; transition: all 0.2s;" data-action="view" data-id="${order.id}" title="Ver Detalle">
-                                 <i class="fas fa-eye"></i>
-                            </button>
-                            <button class="btn btn-icon btn-sm text-secondary hover-text-blue rounded-circle d-flex align-items-center justify-content-center" style="width: 32px; height: 32px; transition: all 0.2s;" data-action="edit" data-id="${order.id}" title="Editar">
-                                <i class="fas fa-edit"></i>
-                            </button>
-                             <button class="btn btn-icon btn-sm text-secondary hover-text-success rounded-circle d-flex align-items-center justify-content-center btn-pay" style="width: 32px; height: 32px; transition: all 0.2s;" data-action="payment" data-id="${order.id}" title="Cobrar">
-                                <i class="fas fa-credit-card"></i>
-                            </button>
-                        </div>
-                    </div>
-
-                </div>
-            </div>
-        `}).join("");
-    }
 
   /**
    * Renderiza la paginación.
@@ -404,159 +352,154 @@ export default class OrderView {
                     <button class="modal-close">&times;</button>
                 </div>
                 
-                <div class="modal-body">
-                    <!-- Estado y Fechas -->
-                    <div class="detail-section">
-                        <h4>Estado y Fechas</h4>
-                        <div class="detail-grid">
-                            <div class="detail-item">
-                                <label>Estado:</label>
-                                <span class="badge badge-${this.getStatusClass(order.estado_nombre)}">
-                                    ${order.estado_nombre || "Pendiente"}
-                                </span>
+                <div class="modal-body p-0">
+                    <div class="invoice-box p-4" style="max-width: 800px; margin: auto; padding: 30px; border: 1px solid #eee; box-shadow: 0 0 10px rgba(0, 0, 0, .15); font-size: 16px; line-height: 24px;">
+                        <!-- Invoice Header -->
+                        <div class="row mb-4 border-bottom pb-4 align-items-center">
+                            <div class="col-8">
+                                <h2 class="text-primary font-weight-bold mb-1"><i class="fas fa-wrench mr-2"></i>TALLER APP</h2>
+                                <p class="text-secondary small mb-0">Comprobante de Servicio</p>
                             </div>
-                            <div class="detail-item">
-                                <label>Fecha de Ingreso:</label>
-                                <span>${this.formatDate(order.fecha_ingreso)}</span>
-                            </div>
-                            <div class="detail-item">
-                                <label>Fecha Estimada:</label>
-                                <span>${this.formatDate(order.fecha_estimada_salida) || "No definida"}</span>
-                            </div>
-                            <div class="detail-item">
-                                <label>Fecha de Salida:</label>
-                                <span>${this.formatDate(order.fecha_salida) || "Pendiente"}</span>
+                            <div class="col-4 text-right">
+                                <h4 class="mb-0 text-dark">ORDEN #${order.id}</h4>
+                                <div class="text-secondary small">Fecha: ${this.formatDate(order.fecha_ingreso)}</div>
+                                <div class="mt-2">
+                                     <span class="badge badge-${this.getStatusClass(order.estado_nombre)} px-3 py-1">
+                                        ${order.estado_nombre || "Pendiente"}
+                                    </span>
+                                </div>
                             </div>
                         </div>
-                    </div>
 
-                    <!-- Vehículo -->
-                    <div class="detail-section">
-                        <h4>Información del Vehículo</h4>
-                        <div class="detail-grid">
-                            <div class="detail-item">
-                                <label>Placa:</label>
-                                <span>${order.placa || "N/A"}</span>
+                        <!-- Client & Vehicle Grid -->
+                        <div class="row mb-4">
+                            <div class="col-6">
+                                <h6 class="text-uppercase text-secondary small font-weight-bold border-bottom pb-1 mb-2">Cliente</h6>
+                                <h5 class="font-weight-bold mb-1 text-main">${order.cliente_nombre || "Sin cliente"}</h5>
+                                <p class="text-secondary small mb-0">CI: ${order.cliente_ci || 'N/A'}</p>
+                                <p class="text-secondary small mb-0">${order.cliente_correo || ''}</p>
+                                <p class="text-secondary small">${order.cliente_telefono || ''}</p>
                             </div>
-                            <div class="detail-item">
-                                <label>Marca:</label>
-                                <span>${order.marca || "N/A"}</span>
-                            </div>
-                            <div class="detail-item">
-                                <label>Modelo:</label>
-                                <span>${order.modelo || "N/A"}</span>
-                            </div>
-                            <div class="detail-item">
-                                <label>Año:</label>
-                                <span>${order.anio || "N/A"}</span>
+                             <div class="col-6">
+                                <h6 class="text-uppercase text-secondary small font-weight-bold border-bottom pb-1 mb-2">Vehículo</h6>
+                                <h5 class="font-weight-bold mb-1 text-main">${order.placa || "N/A"}</h5>
+                                <p class="text-secondary small mb-0">${order.marca || ''} ${order.modelo || ''} ${order.anio || ''}</p>
+                                <p class="text-secondary small">VIN: ${order.vin || 'N/A'}</p>
                             </div>
                         </div>
-                    </div>
 
-                    <!-- Cliente y Técnico -->
-                    <div class="detail-section">
-                        <h4>Cliente y Técnico</h4>
-                        <div class="detail-grid">
-                            <div class="detail-item">
-                                <label>Cliente:</label>
-                                <span>${order.cliente_nombre || "Sin cliente"}</span>
+                         <!-- Diagnostic Block -->
+                        <div class="mb-4 bg-light p-3 rounded border">
+                            <div class="row">
+                                <div class="col-md-6 mb-2 mb-md-0">
+                                    <label class="small font-weight-bold text-secondary text-uppercase mb-1">Problema Reportado</label>
+                                    <div class="text-dark small">${order.problema_reportado || "No especificado"}</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="small font-weight-bold text-secondary text-uppercase mb-1">Diagnóstico Técnico</label>
+                                    <div class="text-dark small font-italic">${order.diagnostico || "Pendiente de diagnóstico (Técnico: " + (order.tecnico_nombre || "Sin asignar") + ")"}</div>
+                                </div>
                             </div>
-                            <div class="detail-item">
-                                <label>Técnico Asignado:</label>
-                                <span>${order.tecnico_nombre || "Sin asignar"}</span>
-                            </div>
                         </div>
-                    </div>
 
-                    <!-- Problema y Diagnóstico -->
-                    <div class="detail-section">
-                        <h4>Problema y Diagnóstico</h4>
-                        <div class="detail-item full-width">
-                            <label>Problema Reportado:</label>
-                            <p class="detail-text">${order.problema_reportado || "No especificado"}</p>
+                        <!-- Services & Parts Table (Invoice Items) -->
+                        <div class="mb-4">
+                            <table class="table table-sm table-borderless">
+                                <thead class="border-bottom text-uppercase small text-secondary">
+                                    <tr>
+                                        <th style="width: 50%">Descripción</th>
+                                        <th class="text-center" style="width: 15%">Cant.</th>
+                                        <th class="text-right" style="width: 15%">P. Unit</th>
+                                        <th class="text-right" style="width: 20%">Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Servicios Header -->
+                                    <tr class="bg-light"><td colspan="4" class="py-1 px-2 small font-weight-bold text-secondary">SERVICIOS</td></tr>
+                                    ${(order.detalles_servicios && order.detalles_servicios.length > 0) 
+                                        ? order.detalles_servicios.map(s => `
+                                            <tr>
+                                                <td>${s.servicio_nombre || s.servicio?.nombre || 'Servicio'}</td>
+                                                <td class="text-center">1</td>
+                                                <td class="text-right">${this.formatCurrency(s.precio_aplicado || s.precio)}</td>
+                                                <td class="text-right">${this.formatCurrency(s.precio_aplicado || s.precio)}</td>
+                                            </tr>`).join('') 
+                                        : '<tr><td colspan="4" class="text-muted small font-italic pl-3">Sin servicios registrados</td></tr>'
+                                    }
+
+                                    <!-- Repuestos Header -->
+                                    <tr class="bg-light"><td colspan="4" class="py-1 px-2 small font-weight-bold text-secondary mt-2">REPUESTOS</td></tr>
+                                    ${(order.detalles_repuestos && order.detalles_repuestos.length > 0)
+                                        ? order.detalles_repuestos.map(r => `
+                                            <tr>
+                                                <td>${r.repuesto_nombre || r.repuesto?.nombre || 'Repuesto'}</td>
+                                                <td class="text-center">${r.cantidad}</td>
+                                                <td class="text-right">${this.formatCurrency(r.precio_unitario_aplicado || r.precio)}</td>
+                                                <td class="text-right">${this.formatCurrency((r.cantidad * (r.precio_unitario_aplicado || r.precio)))}</td>
+                                            </tr>`).join('')
+                                        : '<tr><td colspan="4" class="text-muted small font-italic pl-3">Sin repuestos registrados</td></tr>'
+                                    }
+                                </tbody>
+                            </table>
                         </div>
-                        <div class="detail-item full-width">
-                            <label>Diagnóstico:</label>
-                            <p class="detail-text">${order.diagnostico || "Pendiente de diagnóstico"}</p>
-                        </div>
-                    </div>
 
-                    <!-- Servicios -->
-                    ${this.renderServicesSection(order.detalles_servicios)}
-
-                    <!-- Repuestos -->
-                    ${this.renderPartsSection(order.detalles_repuestos)}
-
-                    <!-- Totales -->
-                    <div class="detail-section totals-section">
-                        <h4>Resumen de Costos</h4>
-                        <div class="totals-grid">
-                            <div class="total-row">
-                                <span>Total Estimado:</span>
-                                <strong>Bs. ${this.formatCurrency(order.total_estimado)}</strong>
+                        <!-- Totals -->
+                        <div class="row justify-content-end">
+                            <div class="col-md-5">
+                                <div class="d-flex justify-content-between mb-2 pb-2 border-bottom">
+                                    <span class="font-weight-bold">Total Estimado</span>
+                                    <span class="font-weight-bold h5 mb-0">Bs. ${this.formatCurrency(order.total_estimado)}</span>
+                                </div>
+                                <div class="d-flex justify-content-between text-secondary small mb-1">
+                                    <span>Pagado</span>
+                                    <span>Bs. ${this.formatCurrency(order.total_pagado || 0)}</span>
+                                </div>
+                                <div class="d-flex justify-content-between text-${(order.saldo_pendiente > 0) ? 'danger' : 'success'} small font-weight-bold">
+                                    <span>Saldo Pendiente</span>
+                                    <span>Bs. ${this.formatCurrency(order.saldo_pendiente || order.total_estimado)}</span>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
                 
-                <!-- Sección de Pagos -->
-                <div class="detail-section payment-info-section">
-                    <h4>Estado de Pago</h4>
-                    <div class="payment-status-grid">
-                        <div class="payment-stat">
-                            <label>Total:</label>
-                            <span class="amount">Bs. ${this.formatCurrency(order.total_estimado)}</span>
-                        </div>
-                        <div class="payment-stat">
-                            <label>Pagado:</label>
-                            <span class="amount paid">Bs. ${this.formatCurrency(order.total_pagado || 0)}</span>
-                        </div>
-                        <div class="payment-stat">
-                            <label>Pendiente:</label>
-                            <span class="amount pending ${(order.saldo_pendiente || 0) > 0 ? 'text-danger' : 'text-success'}">
-                                Bs. ${this.formatCurrency(order.saldo_pendiente || 0)}
-                            </span>
-                        </div>
-                    </div>
-                    
-                    ${this.renderPaymentButton(order)}
-                    
-                    ${order.pagos && order.pagos.length > 0 ? `
-                        <div class="payments-history mt-3">
-                            <h5 style="border-bottom: 1px solid #eee; padding-bottom: 5px; margin-top: 10px;">Historial</h5>
-                            <table class="table table-sm" style="font-size: 0.9rem;">
-                                <thead>
-                                    <tr>
-                                        <th>Fecha</th>
-                                        <th>Método</th>
-                                        <th>Monto</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    ${order.pagos.map(p => `
-                                        <tr>
-                                            <td>${this.formatDate(p.fecha_pago).split(' ')[0]}</td>
-                                            <td>${p.metodo_pago}</td>
-                                            <td class="text-success font-weight-bold">Bs. ${this.formatCurrency(p.monto)}</td>
-                                        </tr>
-                                    `).join('')}
-                                </tbody>
-                            </table>
-                        </div>
-                    ` : ''}
-                </div>
-
-                <div class="modal-footer">
-                    <button class="btn-secondary modal-close">Cerrar</button>
-                    <button class="btn-primary" data-action="edit" data-id="${order.id}">
-                        <i class="fas fa-edit mr-2"></i> Editar Orden
+                <div class="modal-footer bg-light border-top p-3 d-flex justify-content-between align-items-center">
+                    <button class="btn btn-danger btn-close-modal px-4 rounded-pill shadow-sm text-white">
+                        <i class="fas fa-times me-2"></i> Cerrar
                     </button>
+                    <div class="d-flex align-items-center gap-2">
+                        ${this._renderInlinePaymentButton(order)}
+                        <button class="btn btn-primary px-4 rounded-pill shadow-sm" data-action="edit" data-id="${order.id}">
+                            <i class="fas fa-edit me-2"></i> Editar Orden
+                        </button>
+                    </div>
                 </div>
             </div>
         `;
 
     document.body.appendChild(modal);
     this.attachModalEvents(modal);
+  }
+
+  _renderInlinePaymentButton(order) {
+    // Normalizar estado (remover espacios y normalizar mayúsculas/minúsculas si es necesario)
+    const status = (order.estado_nombre || '').trim();
+    
+    // Lista de estados considerados "Finalizados" que permiten cobro
+    const finalStates = ['Finalizado', 'Entregado', 'Completado'];
+    
+    const isFinished = finalStates.includes(status);
+    const saldo = order.saldo_pendiente !== undefined ? parseFloat(order.saldo_pendiente) : parseFloat(order.total_estimado || 0);
+
+    // Solo mostrar si está finalizado y tiene saldo pendiente mayor a 0
+    if (isFinished && saldo > 0.1) {
+        return `
+            <button class="btn btn-success px-4 rounded-pill shadow-sm ms-2" data-action="payment" data-id="${order.id}">
+                <i class="fas fa-credit-card me-2"></i> Cobrar
+            </button>
+        `;
+    }
+    return '';
   }
 
   /**
@@ -570,7 +513,7 @@ export default class OrderView {
     // Verificar saldo
     const saldo = order.saldo_pendiente !== undefined ? parseFloat(order.saldo_pendiente) : parseFloat(order.total_estimado || 0);
     const hasPendingBalance = saldo > 0.1;
-    
+
     // SIEMPRE mostrar botón
     if (isFinished && hasPendingBalance) {
       return `
@@ -590,7 +533,7 @@ export default class OrderView {
         </div>
       `;
     } else {
-        return `
+      return `
         <div style="margin-top: 15px; text-align: center;">
             <button disabled style="width: 100%; padding: 10px; background: #e9ecef; border: 1px solid #ced4da; border-radius: 5px; color: #6c757d; display: flex; align-items: center; justify-content: center;">
               <i class="fas fa-exclamation-triangle mr-2"></i> Finalizar orden para cobrar
@@ -627,25 +570,25 @@ export default class OrderView {
                     </thead>
                     <tbody>
                         ${list
-                          .map((s) => {
-                            // Backend envía 'servicio_nombre'
-                            const nombre =
-                              s.servicio_nombre ||
-                              (s.servicio
-                                ? s.servicio.nombre
-                                : "Servicio Desconocido");
-                            const precio =
-                              s.precio_aplicado !== undefined
-                                ? Number(s.precio_aplicado)
-                                : Number(s.precio) || 0;
-                            return `
+        .map((s) => {
+          // Backend envía 'servicio_nombre'
+          const nombre =
+            s.servicio_nombre ||
+            (s.servicio
+              ? s.servicio.nombre
+              : "Servicio Desconocido");
+          const precio =
+            s.precio_aplicado !== undefined
+              ? Number(s.precio_aplicado)
+              : Number(s.precio) || 0;
+          return `
                                 <tr>
                                     <td>${nombre}</td>
                                     <td>Bs. ${this.formatCurrency(precio)}</td>
                                 </tr>
                             `;
-                          })
-                          .join("")}
+        })
+        .join("")}
                     </tbody>
                 </table>
             </div>
@@ -681,21 +624,21 @@ export default class OrderView {
                     </thead>
                     <tbody>
                         ${list
-                          .map((r) => {
-                            // Backend envía 'repuesto_nombre'
-                            const nombre =
-                              r.repuesto_nombre ||
-                              (r.repuesto
-                                ? r.repuesto.nombre
-                                : "Repuesto Desconocido");
-                            const cantidad = Number(r.cantidad) || 0;
-                            const precio =
-                              r.precio_unitario_aplicado !== undefined
-                                ? Number(r.precio_unitario_aplicado)
-                                : Number(r.precio) || 0;
-                            const subtotal = cantidad * precio;
+        .map((r) => {
+          // Backend envía 'repuesto_nombre'
+          const nombre =
+            r.repuesto_nombre ||
+            (r.repuesto
+              ? r.repuesto.nombre
+              : "Repuesto Desconocido");
+          const cantidad = Number(r.cantidad) || 0;
+          const precio =
+            r.precio_unitario_aplicado !== undefined
+              ? Number(r.precio_unitario_aplicado)
+              : Number(r.precio) || 0;
+          const subtotal = cantidad * precio;
 
-                            return `
+          return `
                                 <tr>
                                     <td>${nombre}</td>
                                     <td class="text-center">${cantidad}</td>
@@ -703,8 +646,8 @@ export default class OrderView {
                                     <td>Bs. ${this.formatCurrency(subtotal)}</td>
                                 </tr>
                             `;
-                          })
-                          .join("")}
+        })
+        .join("")}
                     </tbody>
                 </table>
             </div>
@@ -728,158 +671,115 @@ export default class OrderView {
     modal.className = "modal-overlay open";
     modal.innerHTML = `
             <div class="modal-content modal-large">
-                <div class="modal-header">
-                    <h3>Editar Orden #${order.id}</h3>
-                    <button class="modal-close">&times;</button>
+                <div class="modal-header bg-light border-bottom">
+                    <h3 class="font-weight-bold mb-0 text-dark">Editar Orden #${order.id}</h3>
+                    <button class="modal-close text-secondary" style="font-size: 1.5rem;">&times;</button>
                 </div>
                 
-                <form id="editOrderForm" class="modal-body">
-                    <div class="form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div class="modal-body p-0">
+                    <form id="editOrderForm" class="invoice-box p-4" style="max-width: 800px; margin: auto; padding: 30px; border: none; font-size: 16px; line-height: 24px;">
                         
-                        <!-- Cliente -->
-                        <div class="form-group">
-                            <label for="editOrderClient" style="display: block; margin-bottom: 0.5rem; font-weight: 500; font-family: 'Inter', sans-serif;">Cliente *</label>
-                            <select id="editOrderClient" name="client_id" class="form-control" required style="width: 100%;">
-                                <option value="">Seleccionar cliente...</option>
-                                ${(formData.clients || [])
-                                  .map(
-                                    (c) => `
-                                    <option value="${c.id}" ${c.id == currentClientId ? "selected" : ""}>
-                                        ${c.nombre} ${c.apellido || ""}
-                                    </option>
-                                `,
-                                  )
-                                  .join("")}
-                            </select>
+                        <!-- Header inside form removed as we have modal header -->
+                        <div class="mb-4">
+                            <p class="text-secondary small mb-0">Modifique los detalles de la orden existente.</p>
                         </div>
 
-                        <!-- Vehículo -->
-                        <div class="form-group">
-                            <label for="editOrderAuto" style="display: block; margin-bottom: 0.5rem; font-weight: 500; font-family: 'Inter', sans-serif;">Vehículo *</label>
-                            <select id="editOrderAuto" name="auto_id" class="form-control" required style="width: 100%;">
-                                ${
-                                  currentClientId
-                                    ? (formData.vehicles || [])
-                                        .filter(
-                                          (v) =>
-                                            v.cliente_id == currentClientId,
-                                        )
-                                        .map(
-                                          (v) =>
-                                            `<option value="${v.id}" ${v.id == order.auto_id ? "selected" : ""}>${v.marca} ${v.modelo} (${v.placa})</option>`,
-                                        )
-                                        .join("")
-                                    : '<option value="">Seleccione un cliente primero</option>'
-                                }
-                            </select>
+                        <!-- Top Info Grid -->
+                        <div class="row">
+                             <!-- Left Column: Client & Vehicle -->
+                            <div class="col-md-6 border-right">
+                                <h6 class="text-uppercase text-secondary small font-weight-bold mb-3">Información del Cliente</h6>
+                                <div class="form-group mb-3">
+                                    <label for="editOrderClient" class="small font-weight-bold">Cliente *</label>
+                                    <select id="editOrderClient" name="client_id" class="form-control form-control-sm" required>
+                                        <option value="">Seleccionar cliente...</option>
+                                        ${(formData.clients || []).map(c => `<option value="${c.id}" ${c.id == currentClientId ? "selected" : ""}>${c.nombre} ${c.apellido || ""}</option>`).join("")}
+                                    </select>
+                                </div>
+                                <div class="form-group mb-3">
+                                    <label for="editOrderAuto" class="small font-weight-bold">Vehículo *</label>
+                                    <select id="editOrderAuto" name="auto_id" class="form-control form-control-sm" required>
+                                        ${currentClientId 
+                                            ? (formData.vehicles || []).filter(v => v.cliente_id == currentClientId).map(v => `<option value="${v.id}" ${v.id == order.auto_id ? "selected" : ""}>${v.marca} ${v.modelo} (${v.placa})</option>`).join("")
+                                            : '<option value="">Seleccione un cliente primero</option>'
+                                        }
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- Right Column: Operational Info -->
+                            <div class="col-md-6 pl-md-4">
+                                <h6 class="text-uppercase text-secondary small font-weight-bold mb-3">Detalles Operativos</h6>
+                                <div class="form-row">
+                                    <div class="col-md-6 form-group mb-3">
+                                        <label for="editTecnico" class="small font-weight-bold">Técnico *</label>
+                                        <select id="editTecnico" name="tecnico_id" class="form-control form-control-sm" required>
+                                            <option value="">Seleccionar...</option>
+                                            ${(formData.tecnicos || []).map(t => `<option value="${t.id}" ${t.id == order.tecnico_id ? "selected" : ""}>${t.nombre} ${t.apellido_p || ""}</option>`).join("")}
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6 form-group mb-3">
+                                        <label for="editEstado" class="small font-weight-bold">Estado *</label>
+                                        <select id="editEstado" name="estado_id" class="form-control form-control-sm" required>
+                                            ${(formData.estados || []).map(e => `<option value="${e.id}" ${e.id == order.estado_id ? "selected" : ""}>${e.nombre_estado}</option>`).join("")}
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="col-md-6 form-group mb-3">
+                                        <label for="editFechaIngreso" class="small font-weight-bold">Ingreso</label>
+                                        <input type="datetime-local" id="editFechaIngreso" name="fecha_ingreso" class="form-control form-control-sm" value="${order.fecha_ingreso ? order.fecha_ingreso.slice(0, 16) : ""}">
+                                    </div>
+                                    <div class="col-md-6 form-group mb-3">
+                                        <label for="editFechaEntrega" class="small font-weight-bold">Entrega/Salida</label>
+                                        <input type="datetime-local" id="editFechaEntrega" name="fecha_entrega" class="form-control form-control-sm" value="${order.fecha_entrega ? order.fecha_entrega.slice(0, 16) : ""}">
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
-                        <!-- Técnico Asignado -->
-                        <div class="form-group">
-                            <label for="editTecnico" style="display: block; margin-bottom: 0.5rem; font-weight: 500; font-family: 'Inter', sans-serif;">Técnico Asignado *</label>
-                            <select id="editTecnico" name="tecnico_id" class="form-control" required style="width: 100%;">
-                                <option value="">Seleccionar técnico...</option>
-                                ${(formData.tecnicos || [])
-                                  .map(
-                                    (t) => `
-                                    <option value="${t.id}" ${t.id == order.tecnico_id ? "selected" : ""}>
-                                        ${t.nombre} ${t.apellido_p || ""}
-                                    </option>
-                                `,
-                                  )
-                                  .join("")}
-                            </select>
+                         <!-- Problem & Diagnosis Full Width -->
+                        <div class="mt-3 pt-3 border-top">
+                            <div class="form-group">
+                                <label for="editProblema" class="small font-weight-bold text-uppercase">Problema Reportado</label>
+                                <textarea id="editProblema" name="problema_reportado" class="form-control" rows="2">${order.problema_reportado || ""}</textarea>
+                            </div>
+                            <div class="form-group mt-3">
+                                <label for="editDiagnostico" class="small font-weight-bold text-uppercase">Diagnóstico y Observaciones</label>
+                                <textarea id="editDiagnostico" name="diagnostico" class="form-control" rows="3" placeholder="Diagnóstico técnico...">${order.diagnostico || ""}</textarea>
+                            </div>
                         </div>
 
-                        <!-- Estado -->
-                        <div class="form-group">
-                            <label for="editEstado" style="display: block; margin-bottom: 0.5rem; font-weight: 500; font-family: 'Inter', sans-serif;">Estado *</label>
-                            <select id="editEstado" name="estado_id" class="form-control" required style="width: 100%;">
-                                ${(formData.estados || [])
-                                  .map(
-                                    (e) => `
-                                    <option value="${e.id}" ${e.id == order.estado_id ? "selected" : ""}>
-                                        ${e.nombre_estado}
-                                    </option>
-                                `,
-                                  )
-                                  .join("")}
-                            </select>
+                        <!-- Dynamic Tables -->
+                        <div class="mt-4">
+                            <h6 class="text-uppercase text-secondary small font-weight-bold border-bottom pb-2">Servicios y Repuestos</h6>
+                            <div class="px-2 pt-2 bg-light rounded border">
+                                ${this.renderServicesTable(formData.servicios || [], order.detalles_servicios || [])}
+                                ${this.renderPartsTable(formData.repuestos || [], order.detalles_repuestos || [])}
+                            </div>
                         </div>
 
-                        <!-- Fechas -->
-                        <div class="form-group">
-                            <label for="editFechaIngreso" style="display: block; margin-bottom: 0.5rem; font-weight: 500; font-family: 'Inter', sans-serif;">Fecha de Ingreso</label>
-                            <input 
-                                type="datetime-local" 
-                                id="editFechaIngreso" 
-                                name="fecha_ingreso" 
-                                class="form-control"
-                                value="${order.fecha_ingreso ? order.fecha_ingreso.slice(0, 16) : ""}"
-                                style="width: 100%;"
-                            >
+                        <!-- Totals -->
+                        <div class="row justify-content-end mt-4">
+                            <div class="col-md-5">
+                                <div class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom">
+                                    <span class="font-weight-bold">Total Estimado</span>
+                                    <div class="input-group input-group-sm" style="width: 150px;">
+                                        <span class="input-group-text bg-white border-right-0">Bs.</span>
+                                        <input type="number" id="editTotal" name="total_estimado" class="form-control font-weight-bold text-right border-left-0" step="0.01" value="${order.total_estimado || 0}" readonly>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
+                    </form>
+                </div>
 
-
-                        <div class="form-group">
-                            <label for="editFechaEntrega" style="display: block; margin-bottom: 0.5rem; font-weight: 500; font-family: 'Inter', sans-serif;">Fecha de Entrega/Salida</label>
-                            <input 
-                                type="datetime-local" 
-                                id="editFechaEntrega" 
-                                name="fecha_entrega" 
-                                class="form-control"
-                                value="${order.fecha_entrega ? order.fecha_entrega.slice(0, 16) : ""}"
-                                style="width: 100%;"
-                            >
-                        </div>
-                    </div>
-
-                    <!-- Problema Reportado -->
-                    <div class="form-section mt-4">
-                        <div class="form-group full-width" style="grid-column: 1 / -1;">
-                            <label for="editProblema" style="display: block; margin-bottom: 0.5rem; font-weight: 500; font-family: 'Inter', sans-serif;">Problema Reportado</label>
-                            <textarea 
-                                id="editProblema" 
-                                name="problema_reportado" 
-                                class="form-control" 
-                                rows="3"
-                                style="width: 100%;"
-                            >${order.problema_reportado || ""}</textarea>
-                        </div>
-                    </div>
-
-                    <!-- Diagnóstico -->
-                    <div class="form-section" style="margin-top: 10px; border-top: 1px solid #eee; padding-top: 15px;">
-                        <div class="form-group full-width">
-                            <label for="editDiagnostico">Diagnóstico y Observaciones</label>
-                            <textarea 
-                                id="editDiagnostico" 
-                                name="diagnostico" 
-                                class="form-control" 
-                                rows="4"
-                                placeholder="Ingrese el diagnóstico técnico del vehículo..."
-                                style="width: 100%; min-height: 100px;"
-                            >${order.diagnostico || ""}</textarea>
-                        </div>
-                    </div>
-
-                    <!-- Secciones Dinámicas -->
-                    ${this.renderServicesTable(formData.servicios || [], order.detalles_servicios || [])}
-                    ${this.renderPartsTable(formData.repuestos || [], order.detalles_repuestos || [])}
-
-                    <!-- Total (Pie) -->
-                    <div class="form-group mt-4" style="text-align: right;">
-                        <label for="editTotal" style="font-size: 1.2em; font-weight: bold;">Total Estimado: </label>
-                        <input type="number" id="editTotal" name="total_estimado" class="form-control" 
-                               style="display: inline-block; width: 150px; font-size: 1.2em; font-weight: bold; text-align: right;"
-                               step="0.01" value="${order.total_estimado || 0}" readonly>
-                    </div>
-                </form>
-                
-                <div class="modal-footer">
-                    <button type="button" class="btn-secondary modal-close">Cancelar</button>
-                    <button type="submit" form="editOrderForm" class="btn-primary">
-                        💾 Guardar Cambios
+                <div class="modal-footer bg-light border-top p-3 d-flex justify-content-between align-items-center">
+                    <button type="button" class="btn btn-danger btn-close-modal px-4 rounded-pill shadow-sm text-white">
+                        <i class="fas fa-times me-2"></i> Cancelar
+                    </button>
+                    <button type="submit" form="editOrderForm" class="btn btn-primary px-4 rounded-pill shadow-sm">
+                        <i class="fas fa-save me-2"></i> Guardar Cambios
                     </button>
                 </div>
             </div>
@@ -894,6 +794,183 @@ export default class OrderView {
     );
     this.attachEditCascade(modal, formData.vehicles || []);
     this.attachFormEvents(modal, order.id);
+  }
+
+  /**
+   * Muestra el modal para crear una nueva orden.
+   */
+  showNewOrderModal(data) {
+    const { clients, vehicles, tecnicos, estados } = data;
+
+    // Default date: Now
+    const now = new Date();
+    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+    const defaultDate = now.toISOString().slice(0, 16);
+
+    const modal = document.createElement("div");
+    modal.className = "modal-overlay open";
+    modal.innerHTML = `
+            <div class="modal-content modal-large">
+                <div class="modal-header bg-light border-bottom">
+                    <h3 class="font-weight-bold mb-0 text-dark">Nueva Orden de Servicio</h3>
+                    <button class="modal-close text-secondary" style="font-size: 1.5rem;">&times;</button>
+                </div>
+                
+                <form id="newOrderForm" class="modal-body p-4">
+                    <div class="row g-3">
+                        <!-- Columna 1: Información Principal -->
+                        <div class="col-md-6">
+                            <h5 class="mb-3 text-primary border-bottom pb-2">Información del Cliente</h5>
+                            
+                            <div class="form-group mb-3">
+                                <label for="newOrderClient" class="form-label font-weight-bold small text-uppercase">Cliente *</label>
+                                <select id="newOrderClient" name="client_id" class="form-control form-select shadow-sm" required>
+                                    <option value="">Seleccionar cliente...</option>
+                                    ${(clients || []).map(c => `
+                                        <option value="${c.id}">${c.nombre} ${c.apellido_p || ''} ${c.ci ? `(${c.ci})` : ''}</option>
+                                    `).join('')}
+                                </select>
+                            </div>
+
+                            <div class="form-group mb-3">
+                                <label for="newOrderAuto" class="form-label font-weight-bold small text-uppercase">Vehículo *</label>
+                                <select id="newOrderAuto" name="auto_id" class="form-control form-select shadow-sm" required disabled>
+                                    <option value="">Seleccione un cliente primero</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Columna 2: Detalles del Trabajo -->
+                        <div class="col-md-6">
+                            <h5 class="mb-3 text-primary border-bottom pb-2">Detalles del Servicio</h5>
+
+                            <div class="form-group mb-3">
+                                <label for="newOrderTecnico" class="form-label font-weight-bold small text-uppercase">Técnico Asignado</label>
+                                <select id="newOrderTecnico" name="tecnico_id" class="form-control form-select shadow-sm">
+                                    <option value="">Sin asignar</option>
+                                    ${(tecnicos || []).map(t => `
+                                        <option value="${t.id}">${t.nombre} ${t.apellido_p || ''}</option>
+                                    `).join('')}
+                                </select>
+                            </div>
+
+                            <div class="form-group mb-3">
+                                <label for="newOrderFecha" class="form-label font-weight-bold small text-uppercase">Fecha de Ingreso *</label>
+                                <input type="datetime-local" id="newOrderFecha" name="fecha_ingreso" class="form-control shadow-sm" value="${defaultDate}" required>
+                            </div>
+                        </div>
+
+                        <!-- Fila Completa: Problema -->
+                        <div class="col-12 mt-3">
+                            <label for="newOrderProblema" class="form-label font-weight-bold small text-uppercase">Descripción del Problema *</label>
+                            <textarea id="newOrderProblema" name="problema_reportado" class="form-control shadow-sm" rows="3" placeholder="Describa el problema reportado por el cliente..." required></textarea>
+                        </div>
+                        
+                         <!-- Hidden Status (Default Pendiente) -->
+                         <input type="hidden" name="estado_id" value="1"> 
+                    </div>
+
+                    <!-- Secciones Dinámicas -->
+                    <div class="mt-4 pt-3 border-top">
+                        ${this.renderServicesTable(data.servicios || [])}
+                    </div>
+                    
+                    <div class="mt-4">
+                        ${this.renderPartsTable(data.repuestos || [])}
+                    </div>
+
+                    <!-- Total Estimado -->
+                    <div class="row justify-content-end mt-4">
+                        <div class="col-md-4">
+                            <div class="input-group">
+                                <span class="input-group-text bg-primary text-white font-weight-bold">Total Estimado (Bs.)</span>
+                                <input type="number" id="newOrderTotal" name="total_estimado" class="form-control text-right font-weight-bold" 
+                                       value="0.00" min="0" step="0.01" style="font-size: 1.2rem;">
+                            </div>
+                        </div>
+                    </div>
+                </form>
+                
+                <div class="modal-footer bg-light border-top">
+                    <button class="btn btn-secondary modal-close px-4">Cancelar</button>
+                    <button type="submit" form="newOrderForm" class="btn btn-success px-4 shadow-sm">
+                        <i class="fas fa-save mr-2"></i> Crear Orden
+                    </button>
+                </div>
+            </div>
+        `;
+
+    document.body.appendChild(modal);
+    this.attachModalEvents(modal);
+
+    // Attach Client-Vehicle Cascade Logic
+    const clientSelect = modal.querySelector("#newOrderClient");
+    const autoSelect = modal.querySelector("#newOrderAuto");
+
+    clientSelect.addEventListener('change', () => {
+      const clientId = clientSelect.value;
+      autoSelect.innerHTML = '<option value="">Seleccionar vehículo...</option>';
+      autoSelect.disabled = true;
+      autoSelect.classList.remove('border-danger');
+
+      if (clientId) {
+        const clientVehicles = (vehicles || []).filter(v => v.cliente_id == clientId || v.client_id == clientId);
+
+        if (clientVehicles.length > 0) {
+          autoSelect.disabled = false;
+          clientVehicles.forEach(v => {
+            const option = document.createElement('option');
+            option.value = v.id;
+            option.textContent = `${v.marca} ${v.modelo} - ${v.placa}`;
+            autoSelect.appendChild(option);
+          });
+        } else {
+          const option = document.createElement('option');
+          option.textContent = "-- Cliente sin vehículos --";
+          autoSelect.appendChild(option);
+        }
+      } else {
+        const option = document.createElement('option');
+        option.textContent = "Seleccione un cliente primero";
+        autoSelect.appendChild(option);
+      }
+    });
+
+    // Attach Validation Logic on Submit
+    const form = modal.querySelector('#newOrderForm');
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+
+      let isValid = true;
+      const requiredIds = ['newOrderClient', 'newOrderAuto', 'newOrderProblema', 'newOrderTecnico', 'newOrderEstado'];
+
+      requiredIds.forEach(id => {
+        const el = document.getElementById(id);
+        if (!el.value.trim()) {
+          el.classList.add('is-invalid'); // Bootstrap class
+          el.addEventListener('input', () => el.classList.remove('is-invalid'), { once: true });
+          isValid = false;
+        }
+      });
+
+      if (!isValid) return;
+
+      const formData = {
+        cliente_id: form.client_id.value,
+        auto_id: form.auto_id.value,
+        tecnico_id: form.tecnico_id.value || null,
+        fecha_ingreso: form.fecha_ingreso.value,
+        problema_reportado: form.problema_reportado.value,
+        total_estimado: form.total_estimado.value || 0,
+        estado_id: 1 // Default ID for Pendiente
+      };
+
+      if (this.onSubmitNewOrder) {
+        this.onSubmitNewOrder(formData);
+        this.closeModal(modal); // Ensure this method exists or use modal.remove()
+        modal.remove(); // Fallback
+      }
+    });
   }
 
   attachEditCascade(modal, vehicles) {
@@ -994,7 +1071,7 @@ export default class OrderView {
    */
   attachModalEvents(modal) {
     // Cerrar modal
-    modal.querySelectorAll(".modal-close").forEach((btn) => {
+    modal.querySelectorAll(".modal-close, .btn-close-modal").forEach((btn) => {
       btn.addEventListener("click", () => {
         modal.remove();
       });
@@ -1102,8 +1179,8 @@ export default class OrderView {
     const date = new Date(dateString);
     return date.toLocaleDateString("es-BO", {
       year: "numeric",
-      month: "short",
-      day: "numeric",
+      month: "long",
+      day: "numeric"
     });
   }
 
@@ -1140,129 +1217,109 @@ export default class OrderView {
                     <button class="modal-close">&times;</button>
                 </div>
                 
-                <form id="newOrderForm" class="modal-body">
-                    <div class="form-grid">
-                        <!-- Selección de Cliente -->
-                        <div class="form-group">
-                            <label for="newOrderClient">Cliente *</label>
-                            <select id="newOrderClient" name="client_id" class="form-control" required>
-                                <option value="">Seleccionar cliente...</option>
-                                ${(data.clients || [])
-                                  .map(
-                                    (c) => `
-                                    <option value="${c.id}">${c.nombre} ${c.apellido || ""}</option>
-                                `,
-                                  )
-                                  .join("")}
-                            </select>
+                <div class="modal-body p-0">
+                    <form id="newOrderForm" class="invoice-box p-4" style="max-width: 800px; margin: auto; padding: 30px; border: 1px solid #eee; box-shadow: 0 0 10px rgba(0, 0, 0, .15); font-size: 16px; line-height: 24px;">
+                        
+                        <!-- Header -->
+                        <div class="border-bottom pb-3 mb-4">
+                            <h4 class="text-primary font-weight-bold mb-1"><i class="fas fa-file-invoice mr-2"></i>Nueva Orden de Trabajo</h4>
+                            <p class="text-secondary small mb-0">Complete los datos para generar una nueva orden de servicio.</p>
                         </div>
 
-                        <!-- Selección de Vehículo (Dependiente) -->
-                        <div class="form-group">
-                            <label for="newOrderAuto">Vehículo *</label>
-                            <select id="newOrderAuto" name="auto_id" class="form-control" disabled required>
-                                <option value="">Seleccione un cliente primero</option>
-                            </select>
+                        <!-- Top Info Grid -->
+                        <div class="row">
+                            <!-- Left Column: Client & Vehicle -->
+                            <div class="col-md-6 border-right">
+                                <h6 class="text-uppercase text-secondary small font-weight-bold mb-3">Información del Cliente</h6>
+                                <div class="form-group mb-3">
+                                    <label for="newOrderClient" class="small font-weight-bold">Cliente *</label>
+                                    <select id="newOrderClient" name="client_id" class="form-control form-control-sm" required>
+                                        <option value="">Seleccionar cliente...</option>
+                                        ${(data.clients || []).map(c => `<option value="${c.id}">${c.nombre} ${c.apellido || ""}</option>`).join("")}
+                                    </select>
+                                </div>
+                                <div class="form-group mb-3">
+                                    <label for="newOrderAuto" class="small font-weight-bold">Vehículo *</label>
+                                    <select id="newOrderAuto" name="auto_id" class="form-control form-control-sm" disabled required>
+                                        <option value="">Seleccione un cliente primero</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- Right Column: Operational Info -->
+                            <div class="col-md-6 pl-md-4">
+                                <h6 class="text-uppercase text-secondary small font-weight-bold mb-3">Detalles Operativos</h6>
+                                <div class="form-row">
+                                    <div class="col-md-6 form-group mb-3">
+                                        <label for="newOrderTecnico" class="small font-weight-bold">Técnico *</label>
+                                        <select id="newOrderTecnico" name="tecnico_id" class="form-control form-control-sm" required>
+                                            <option value="">Seleccionar...</option>
+                                            ${(data.tecnicos || []).map(t => `<option value="${t.id}">${t.nombre} ${t.apellido_p || ""}</option>`).join("")}
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6 form-group mb-3">
+                                        <label for="newOrderEstado" class="small font-weight-bold">Estado Inicial *</label>
+                                        <select id="newOrderEstado" name="estado_id" class="form-control form-control-sm" required>
+                                            ${(data.estados || []).map(e => `<option value="${e.id}">${e.nombre_estado}</option>`).join("")}
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="col-md-6 form-group mb-3">
+                                        <label for="newOrderFechaIngreso" class="small font-weight-bold">Ingreso</label>
+                                        <input type="datetime-local" id="newOrderFechaIngreso" name="fecha_ingreso" class="form-control form-control-sm" value="${new Date().toISOString().slice(0, 16)}">
+                                    </div>
+                                    <div class="col-md-6 form-group mb-3">
+                                        <label for="newOrderFechaEntrega" class="small font-weight-bold">Entrega Est.</label>
+                                        <input type="datetime-local" id="newOrderFechaEntrega" name="fecha_entrega" class="form-control form-control-sm">
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
-                        <!-- Técnico Asignado -->
-                        <div class="form-group">
-                            <label for="newOrderTecnico">Técnico Asignado *</label>
-                            <select id="newOrderTecnico" name="tecnico_id" class="form-control" required>
-                                <option value="">Seleccionar técnico...</option>
-                                ${(data.tecnicos || [])
-                                  .map(
-                                    (t) => `
-                                    <option value="${t.id}">
-                                        ${t.nombre} ${t.apellido_p || ""}
-                                    </option>
-                                `,
-                                  )
-                                  .join("")}
-                            </select>
+                        <!-- Problem & Diagnosis Full Width -->
+                        <div class="mt-3 pt-3 border-top">
+                            <div class="form-group">
+                                <label for="newOrderProblema" class="small font-weight-bold text-uppercase">Problema Reportado *</label>
+                                <textarea id="newOrderProblema" name="problema_reportado" class="form-control" rows="2" placeholder="Describa el problema reportado por el cliente..." required></textarea>
+                            </div>
+                            <div class="form-group mt-3">
+                                <label for="newOrderDiagnostico" class="small font-weight-bold text-uppercase">Diagnóstico Inicial</label>
+                                <textarea id="newOrderDiagnostico" name="diagnostico" class="form-control" rows="2" placeholder="Observaciones técnicas preliminares..."></textarea>
+                            </div>
                         </div>
 
-                        <!-- Estado Inicial -->
-                        <div class="form-group">
-                            <label for="newOrderEstado">Estado Inicial *</label>
-                            <select id="newOrderEstado" name="estado_id" class="form-control" required>
-                                ${(data.estados || [])
-                                  .map(
-                                    (e) => `
-                                    <option value="${e.id}">${e.nombre_estado}</option>
-                                `,
-                                  )
-                                  .join("")}
-                            </select>
+                        <!-- Dynamic Tables -->
+                        <div class="mt-4">
+                            <h6 class="text-uppercase text-secondary small font-weight-bold border-bottom pb-2">Servicios y Repuestos</h6>
+                            <div class="px-2 pt-2 bg-light rounded border">
+                                ${this.renderServicesTable(data.servicios || [])}
+                                ${this.renderPartsTable(data.repuestos || [])}
+                            </div>
                         </div>
 
-                        <!-- Fecha Ingreso -->
-                        <div class="form-group">
-                            <label for="newOrderFechaIngreso">Fecha de Ingreso</label>
-                            <input 
-                                type="datetime-local" 
-                                id="newOrderFechaIngreso" 
-                                name="fecha_ingreso" 
-                                class="form-control"
-                                value="${new Date().toISOString().slice(0, 16)}"
-                            >
+                        <!-- Totals -->
+                        <div class="row justify-content-end mt-4">
+                            <div class="col-md-5">
+                                <div class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom">
+                                    <span class="font-weight-bold">Total Estimado</span>
+                                    <div class="input-group input-group-sm" style="width: 150px;">
+                                        <span class="input-group-text bg-white border-right-0">Bs.</span>
+                                        <input type="number" id="newOrderTotal" name="total_estimado" class="form-control font-weight-bold text-right border-left-0" step="0.01" value="0.00" readonly>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
-                        <!-- Fecha Estimada -->
-                        <div class="form-group">
-                            <label for="newOrderFechaEntrega">Fecha Estimada de Entrega</label>
-                            <input type="datetime-local" id="newOrderFechaEntrega" name="fecha_entrega" class="form-control">
-                        </div>
-                    </div>
+                    </form>
+                </div>
 
-                    <!-- Problema -->
-                    <div class="form-section" style="margin-top: 20px;">
-                        <div class="form-group full-width">
-                            <label for="newOrderProblema">Problema Reportado *</label>
-                            <textarea 
-                                id="newOrderProblema" 
-                                name="problema_reportado" 
-                                class="form-control" 
-                                rows="3"
-                                placeholder="Describa detalladamente el problema..."
-                                required
-                                style="width: 100%;"
-                            ></textarea>
-                        </div>
-                    </div>
-
-                    <!-- Diagnóstico (Campo Nuevo) -->
-                     <div class="form-section" style="margin-top: 10px; border-top: 1px solid #eee; padding-top: 15px;">
-                        <div class="form-group full-width">
-                            <label for="newOrderDiagnostico">Diagnóstico / Observaciones</label>
-                            <textarea 
-                                id="newOrderDiagnostico" 
-                                name="diagnostico" 
-                                class="form-control" 
-                                rows="3"
-                                placeholder="Diagnóstico técnico preliminar..."
-                                style="width: 100%;"
-                            ></textarea>
-                        </div>
-                    </div>
-
-                    <!-- Secciones Dinámicas -->
-                    ${this.renderServicesTable(data.servicios || [])}
-                    ${this.renderPartsTable(data.repuestos || [])}
-
-                    <!-- Total (Pie) -->
-                    <div class="form-group mt-4" style="text-align: right;">
-                        <label for="newOrderTotal" style="font-size: 1.2em; font-weight: bold;">Total Estimado: </label>
-                        <input type="number" id="newOrderTotal" name="total_estimado" class="form-control" 
-                               style="display: inline-block; width: 150px; font-size: 1.2em; font-weight: bold; text-align: right;"
-                               step="0.01" value="0.00" readonly>
-                    </div>
-                </form>
-                
-                <div class="modal-footer">
-                    <button type="button" class="btn-secondary modal-close">Cancelar</button>
-                    <button type="submit" form="newOrderForm" class="btn-primary">
-                        💾 Crear Orden
+                <div class="modal-footer bg-light border-top p-3 d-flex justify-content-between align-items-center">
+                    <button type="button" class="btn btn-danger btn-close-modal px-4 rounded-pill shadow-sm text-white">
+                        <i class="fas fa-times me-2"></i> Cancelar
+                    </button>
+                    <button type="submit" form="newOrderForm" class="btn btn-primary px-4 rounded-pill shadow-sm">
+                        <i class="fas fa-save me-2"></i> Crear Orden
                     </button>
                 </div>
             </div>
@@ -1321,14 +1378,14 @@ export default class OrderView {
                     <select class="form-control service-select" name="servicios[${index}][servicio_id]" required>
                         <option value="">Seleccionar Servicio...</option>
                         ${allServices
-                          .map(
-                            (s) => `
+        .map(
+          (s) => `
                             <option value="${s.id}" data-price="${s.precio}" ${s.id == selectedId ? "selected" : ""}>
                                 ${s.nombre}
                             </option>
                         `,
-                          )
-                          .join("")}
+        )
+        .join("")}
                     </select>
                 </td>
                 <td>
@@ -1392,14 +1449,14 @@ export default class OrderView {
                     <select class="form-control part-select" name="repuestos[${index}][repuesto_id]" required>
                         <option value="">Seleccionar Repuesto...</option>
                         ${allParts
-                          .map(
-                            (p) => `
+        .map(
+          (p) => `
                             <option value="${p.id}" data-price="${p.precio_venta}" data-stock="${p.stock}" ${p.id == selectedId ? "selected" : ""}>
                                 ${p.nombre} (Stock: ${p.stock})
                             </option>
                         `,
-                          )
-                          .join("")}
+        )
+        .join("")}
                     </select>
                 </td>
                 <td>
@@ -1433,9 +1490,29 @@ export default class OrderView {
 
     servicesBody.addEventListener("change", (e) => {
       if (e.target.classList.contains("service-select")) {
-        const option = e.target.options[e.target.selectedIndex];
+        const currentSelect = e.target;
+        const selectedValue = currentSelect.value;
+        const row = currentSelect.closest("tr");
+        
+        // Validation: Check for duplicates
+        let isDuplicate = false;
+        modal.querySelectorAll(".service-select").forEach(select => {
+            if (select !== currentSelect && select.value === selectedValue && selectedValue !== "") {
+                isDuplicate = true;
+            }
+        });
+
+        if (isDuplicate) {
+            alert("Este servicio ya ha sido agregado a la orden.");
+            currentSelect.value = ""; // Reset
+            row.querySelector(".service-price").value = "0.00";
+            this.calculateTotal(modal);
+            return;
+        }
+
+        const option = currentSelect.options[currentSelect.selectedIndex];
         const price = option.getAttribute("data-price") || 0;
-        const row = e.target.closest("tr");
+        
         row.querySelector(".service-price").value =
           parseFloat(price).toFixed(2);
         this.calculateTotal(modal);

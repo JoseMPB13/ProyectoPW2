@@ -16,8 +16,12 @@ export default class WorkerModel {
      */
     async getWorkers(role = null) {
         let endpoint = '/auth/users';
-        if (role) endpoint += `?role=${role}`;
-        return this.api.get(endpoint);
+        // Ensure we fetch enough records for client-side search/filter since backend search is not implemented
+        const params = new URLSearchParams();
+        params.append('per_page', '1000');
+        if (role) params.append('role', role);
+        
+        return this.api.get(`${endpoint}?${params.toString()}`);
     }
 
     /**

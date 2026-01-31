@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sistema Taller Mecánico</title>
+
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- FontAwesome Icons -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+      integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw=="
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    />
+
+    <!-- Bootstrap 5 CSS -->
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <!-- Bootstrap Icons -->
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css"
+    />
+
+    <!-- Animate.css -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"
+    />
+    <!-- AOS (Animate On Scroll) -->
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet" />
+
+    <!-- Custom Styles (After Bootstrap) -->
+    <link rel="stylesheet" href="css/styles.css" />
+    <!-- n8n Chat CSS -->
+    <link
+      href="https://cdn.jsdelivr.net/npm/@n8n/chat/dist/style.css"
+      rel="stylesheet"
+    />
+  </head>
+
+  <body class="">
+    <!-- n8n Chat Target -->
+    <div id="n8n-chat"></div>
+    <div class="d-flex" id="wrapper">
+      <!-- Sidebar Navigation -->
+      <aside
+        class="bg-dark text-white d-flex flex-column"
+        id="sidebar-wrapper"
+        style="width: 250px; height: 100vh; position: sticky; top: 0"
+      >
+        <div class="sidebar-header border-bottom p-3 mb-2">
+          <h4 class="m-0 text-white fw-bold">
+            <i class="fas fa-wrench me-2 text-primary"></i> Taller App
+          </h4>
+        </div>
+        <div
+          class="list-group list-group-flush flex-grow-1 overflow-auto custom-scrollbar"
+        >
+          <a
+            href="#"
+            class="list-group-item list-group-item-action bg-transparent text-white border-0 active"
+            data-view="dashboard"
+            title="Dashboard"
+          >
+            <i class="fas fa-tachometer-alt me-2"></i> Dashboard
+          </a>
+          <a
+            href="#"
+            class="list-group-item list-group-item-action bg-transparent text-white border-0"
+            data-view="orders"
+            title="Gestión de Órdenes"
+          >
+            <i class="fas fa-clipboard-list me-2"></i> Órdenes
+          </a>
+          <a
+            href="#"
+            class="list-group-item list-group-item-action bg-transparent text-white border-0"
+            data-view="services"
+            title="Servicios"
+          >
+            <i class="fas fa-tools me-2"></i> Servicios
+          </a>
+          <a
+            href="#"
+            class="list-group-item list-group-item-action bg-transparent text-white border-0"
+            data-view="inventory"
+            title="Inventario"
+          >
+            <i class="fas fa-boxes me-2"></i> Inventario
+          </a>
+          <a
+            href="#"
+            class="list-group-item list-group-item-action bg-transparent text-white border-0"
+            data-view="trabajadores"
+            title="Trabajadores"
+          >
+            <i class="fas fa-users-cog me-2"></i> Trabajadores
+          </a>
+          <a
+            href="#"
+            class="list-group-item list-group-item-action bg-transparent text-white border-0"
+            data-view="clientes"
+            title="Clientes"
+          >
+            <i class="fas fa-user-friends me-2"></i> Clientes
+          </a>
+          <a
+            href="#"
+            class="list-group-item list-group-item-action bg-transparent text-white border-0"
+            data-view="vehicles"
+            title="Autos"
+          >
+            <i class="fas fa-car me-2"></i> Autos
+          </a>
+        </div>
+        <div class="p-3 border-top mt-auto bg-dark">
+          <button
+            id="logoutBtn"
+            class="btn btn-outline-danger w-100 text-center py-2 shadow-sm scale-hover"
+          >
+            <i class="fas fa-sign-out-alt me-2"></i> Cerrar Sesión
+          </button>
+        </div>
+      </aside>
+
+      <!-- Main Content Area -->
+      <div id="page-content-wrapper" class="w-100">
+        <nav
+          class="navbar navbar-expand-lg navbar-light bg-white shadow-sm border-bottom px-4"
+        >
+          <button class="btn btn-outline-secondary me-3" id="menu-toggle">
+            <i class="fas fa-bars"></i>
+          </button>
+          <h2 class="fs-4 m-0" id="pageTitle">Dashboard</h2>
+
+          <div class="collapse navbar-collapse" id="navbarSupportedContent">
+            <ul class="navbar-nav ms-auto mt-2 mt-lg-0 align-items-center">
+              <li class="nav-item">
+                <button
+                  id="themeToggle"
+                  class="btn btn-link text-secondary"
+                  title="Alternar Tema"
+                >
+                  <i class="fas fa-moon"></i>
+                </button>
+              </li>
+              <li class="nav-item dropdown">
+                <a
+                  class="nav-link dropdown-toggle fw-bold"
+                  href="#"
+                  id="navbarDropdown"
+                  role="button"
+                  data-bs-toggle="dropdown"
+                  aria-haspopup="true"
+                  aria-expanded="false"
+                >
+                  <i class="fas fa-user-circle me-1"></i>
+                  <span id="userName">Usuario</span>
+                </a>
+                <div
+                  class="dropdown-menu dropdown-menu-end"
+                  aria-labelledby="navbarDropdown"
+                >
+                  <a class="dropdown-item" href="#">Perfil</a>
+                  <div class="dropdown-divider"></div>
+                  <a
+                    class="dropdown-item text-danger"
+                    href="#"
+                    onclick="document.getElementById('logoutBtn').click()"
+                    >Salir</a
+                  >
+                </div>
+              </li>
+            </ul>
+          </div>
+        </nav>
+
+        <div class="container-fluid py-4 px-4">
+          <div id="contentArea">
+            <!-- El contenido dinámico se cargará aquí -->
+            <div class="card text-center p-5 shadow-sm">
+              <div class="card-body">
+                <i class="fas fa-car-side fa-4x text-primary mb-3"></i>
+                <h3 class="card-title">Bienvenido al Sistema</h3>
+                <p class="card-text text-muted">
+                  Selecciona una opción del menú para comenzar a gestionar tu
+                  taller.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bootstrap 5 JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- AOS JS -->
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    <script type="module" src="js/utils/ui.js"></script>
+    <script type="module" src="js/app.js"></script>
+
+    <!-- Toggle Menu Script -->
+    <script>
+      const wrapper = document.getElementById("wrapper");
+      const toggleButton = document.getElementById("menu-toggle");
+
+      toggleButton.onclick = function () {
+        const sidebar = document.getElementById("sidebar-wrapper");
+        if (sidebar.style.display === "none") {
+          sidebar.style.display = "block";
+        } else {
+          sidebar.style.display = "none";
+        }
+      };
+    </script>
+  </body>
+</html>

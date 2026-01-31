@@ -8,7 +8,7 @@ class ClientService:
     """
 
     @staticmethod
-    def create_client(first_name, last_name, email=None, phone=None, address=None):
+    def create_client(first_name, last_name, ci, email=None, phone=None, address=None):
         """
         Crea un nuevo cliente.
 
@@ -32,6 +32,7 @@ class ClientService:
         new_client = Cliente(
             nombre=first_name,
             apellido_p=last_name,
+            ci=ci,
             correo=email,
             celular=phone,
             direccion=address,
@@ -157,6 +158,33 @@ class ClientService:
         except IntegrityError:
             db.session.rollback()
             raise ValueError("Error de integridad al actualizar vehículo")
+        except Exception as e:
+            db.session.rollback()
+            raise e
+
+    @staticmethod
+    def update_client(client_id, nombre=None, apellido_p=None, apellido_m=None, ci=None, correo=None, celular=None, direccion=None):
+        """
+        Actualiza los datos de un cliente.
+        """
+        client = Cliente.query.get(client_id)
+        if not client:
+            raise ValueError("Cliente no encontrado")
+
+        if nombre: client.nombre = nombre
+        if apellido_p: client.apellido_p = apellido_p
+        if apellido_m is not None: client.apellido_m = apellido_m 
+        if ci: client.ci = ci
+        if correo: client.correo = correo
+        if celular: client.celular = celular
+        if direccion: client.direccion = direccion
+
+        try:
+            db.session.commit()
+            return client
+        except IntegrityError:
+            db.session.rollback()
+            raise ValueError("El correo o CI ya está registrado")
         except Exception as e:
             db.session.rollback()
             raise e
