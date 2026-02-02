@@ -104,7 +104,10 @@ export default class DashboardView {
                         <div class="card-body">
                             <h5 class="card-title mb-3">Distribución de Órdenes</h5>
                             <div class="progress" style="height: 25px;">
-                                ${this._renderStatusBar(statusCounts, totalOrders)}
+                                ${(() => {
+                                    const totalActive = Object.values(statusCounts).reduce((a, b) => a + b, 0);
+                                    return this._renderStatusBar(statusCounts, totalActive);
+                                })()}
                             </div>
                             <div class="mt-3 d-flex flex-wrap gap-3 justify-content-center justify-content-md-start">
                                  ${this._renderStatusLegend(statusCounts)}

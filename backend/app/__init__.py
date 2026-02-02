@@ -2,9 +2,13 @@ from flask import Flask
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
 from flask_sqlalchemy import SQLAlchemy
+from flasgger import Swagger
+import yaml
+import os
 
 db = SQLAlchemy()
 jwt = JWTManager()
+swagger = Swagger()
 
 def create_app():
     app = Flask(__name__)
@@ -26,6 +30,32 @@ def create_app():
     
     db.init_app(app)
     jwt.init_app(app)
+    
+    # Inicialización de Flasgger cargando el template manualmente
+    openapi_path = os.path.join(app.root_path, '../openapi.yaml')
+    with open(openapi_path, 'r', encoding='utf-8') as f:
+        template = yaml.safe_load(f)
+    
+    swagger.template = template
+    
+    # Configuración explícita para OpenAPI 3.0
+    app.config['SWAGGER'] = {
+        "headers": [],
+        "specs": [
+            {
+                "endpoint": 'apispec',
+                "route": '/apispec.json',
+                "rule_filter": lambda rule: True,  # all in
+                "model_filter": lambda tag: True,  # all in
+            }
+        ],
+        "static_url_path": "/flasgger_static",
+        "swagger_ui": True,
+        "specs_route": "/apidocs/",
+        "openapi": "3.0.0" # Forzamos versión 3 para evitar conflicto
+    }
+    
+    swagger.init_app(app)
 
     from app.routes.health import health_bp
     app.register_blueprint(health_bp)

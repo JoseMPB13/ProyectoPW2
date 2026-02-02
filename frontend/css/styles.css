@@ -39,6 +39,11 @@ body {
   z-index: 1000;
 }
 
+#wrapper.toggled #sidebar-wrapper {
+  width: 0 !important;
+  overflow: hidden;
+}
+
 /* Custom Scrollbar for Sidebar */
 .custom-scrollbar::-webkit-scrollbar {
   width: 6px;

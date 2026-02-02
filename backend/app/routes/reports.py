@@ -1,12 +1,16 @@
 from flask import Blueprint, jsonify
 from app.services.report_service import ReportService
-from app.services.auth_service import AuthService
-from flask_jwt_extended import jwt_required, get_jwt_identity
+from flask_jwt_extended import jwt_required
 
 # ==============================================================================
-# Capa de RUTAS (Controlador) - Reports
+# ENCABEZADO DEL ARCHIVO (Controlador de Reportes)
 # ==============================================================================
-# Endpoints de solo lectura para dashboards y métricas.
+# Propósito:
+#   Endpoints de solo lectura para la generación de Dashboards y Reportes.
+#   Centraliza la entrega de métricas de negocio.
+#
+# Interacciones:
+#   - ReportService: Lógica de agregación y cálculo.
 # ==============================================================================
 
 reports_bp = Blueprint('reports', __name__, url_prefix='/reports')
@@ -18,17 +22,22 @@ reports_bp = Blueprint('reports', __name__, url_prefix='/reports')
 @jwt_required()
 def get_dashboard_metrics():
     """
-    Devuelve métricas clave para el panel de administración.
-    Accesible para todos los usuarios autenticados.
-
+    Devuelve las métricas consolidadas para el Dashboard Principal.
+    
+    Datos incluidos:
+        - Ingresos Totales.
+        - Órdenes por Estado.
+        - Totales de Clientes y Vehículos.
+        - Alertas de Stock.
+    
     Returns:
-        JSON: Métricas mensuales.
+        JSON: Estructura de métricas lista para renderizado.
     """
     try:
-        # Delegamos la lógica de agregación al servicio
+        # Delegación completa al servicio.
+        # El controlador solo actúa como pasarela HTTP.
         metrics = ReportService.get_monthly_metrics()
         return jsonify(metrics), 200
 
     except Exception as e:
         return jsonify({"msg": f"Error al generar reporte: {str(e)}"}), 500
-

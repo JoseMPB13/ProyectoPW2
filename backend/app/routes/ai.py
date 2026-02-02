@@ -1,45 +1,54 @@
 from flask import Blueprint, request, jsonify
 
 # ==============================================================================
-# Capa de RUTAS (Controlador) - Inteligencia Artificial
+# ENCABEZADO DEL ARCHIVO (Controlador - Servicios AI)
 # ==============================================================================
-# Endpoints para la comunicación con modelos de IA (Mock / Stub actualmente).
-# Futura integración con LangChain / OpenAI.
+# Propósito:
+#   Interfaz para capacidades de Inteligencia Artificial Generativa.
+#   Actualmente implementa Stubs/Mocks para desarrollo, listo para integración
+#   con LangChain o proveedores LLM (OpenAI, Gemini).
+#
+# Flujo Lógico Central:
+#   1. Recepción de Prompt/Pregunta.
+#   2. (Futuro) RAG: Recuperación de contexto.
+#   3. (Futuro) Generación: Paso a LLM.
+#   4. Respuesta estructurada.
+#
+# Interacciones:
+#   - Cliente: Chatbot del Frontend.
 # ==============================================================================
 
 ai_bp = Blueprint('ai', __name__, url_prefix='/ai')
 
 # ==============================================================================
-# Endpoint: Preguntar a la IA (Mock)
+# Endpoint: Consulta a la IA
 # ==============================================================================
 @ai_bp.route('/ask', methods=['POST'])
 def ask_ai():
     """
-    Recibe una pregunta y devuelve una respuesta simulada (Stub).
-    Diseñado para integrar posteriormente lógica de RAG o LLMs.
-
+    Procesa una consulta del usuario y devuelve una respuesta generada.
+    
     Request Body:
-        question (str): Pregunta del usuario.
-        context (str, optional): Contexto adicional.
-
+        question (str): El texto de la pregunta.
+        context (str, opcional): Historial o contexto adicional.
+        
     Returns:
-        JSON: Respuesta generada por la IA (o Mock).
+        JSON: { response: "texto", ... }
     """
     data = request.get_json()
     
-    # Validar entrada
+    # Validación Básica
     if not data or not data.get('question'):
         return jsonify({"msg": "Se requiere una pregunta (field: question)"}), 400
 
     question = data['question']
-    context = data.get('context', '') # Contexto opcional (ej: historial de chat)
+    # contexto = data.get('context', '') 
 
-    # TODO: Implementar LangChain aquí
-    # Aquí es donde conectaríamos con OpenAI/Anthropic/Gemini usando LangChain.
-    # Podríamos usar el 'context' para RAG (Retrieval Augmented Generation).
-
-    # Respuesta simulada por ahora
-    mock_response = f"El backend recibió tu pregunta sobre: {question}"
+    # TODO: Integración Real
+    # Aquí iría la llamada a LangChain o API de OpenAI.
+    # Por ahora devolvemos un eco inteligente.
+    
+    mock_response = f"Simulación de IA: He recibido tu pregunta sobre '{question}'. El sistema de RAG estará disponible próximamente."
 
     return jsonify({
         "response": mock_response,

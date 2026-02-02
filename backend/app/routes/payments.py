@@ -5,19 +5,50 @@ from app.models import db, Pago, Orden, Auto, Cliente
 from datetime import datetime
 from sqlalchemy import text
 
+# ==============================================================================
+# ENCABEZADO DEL ARCHIVO (Controlador de Pagos)
+# ==============================================================================
+# Propósito:
+#   Gestiona el ciclo de vida financiero de las órdenes de trabajo.
+#   Permite registrar abonos, liquidar saldos y consultar históricos.
+#
+# Flujo Lógico Central:
+#   1. Recepción de Intención de Pago.
+#   2. Validación de Estado (Orden Finalizada/Entregada).
+#   3. Verificación de Saldo (No sobrepagar).
+#   4. Registro Transaccional del Pago.
+#   5. Actualización de Balance de la Orden.
+#
+# Interacciones:
+#   - Modelos: Pago, Orden, Cliente, Auto.
+#   - Cliente HTTP: Módulo de Caja/Pagos del Frontend.
+# ==============================================================================
+
 payments_bp = Blueprint('payments', __name__, url_prefix='/payments')
 
+# ==============================================================================
+# Endpoint: Registrar Nuevo Pago
+# ==============================================================================
 @payments_bp.route('/', methods=['POST'])
 @jwt_required()
 def create_payment():
     """
-    Crea un nuevo pago para una orden.
-    Valida que la orden este finalizada y que el monto no exceda el saldo pendiente.
+    Registra un pago parcial o total asociado a una orden finalizada.
+    
+    Request Body:
+        orden_id (int): ID de la orden.
+        monto (float): Cantidad a abonar.
+        metodo_pago (str): Efectivo, Tarjeta, Transferencia, etc.
+        referencia (str, optional): Nro de operación bancaria o nota.
+        
+    Returns:
+        201 Created: Pago exitoso y nuevo balance.
+        400 Bad Request: Monto inválido, orden no finalizada o exceso de saldo.
     """
     try:
         data = request.get_json()
         
-        # Validaciones basicas
+        # Validaciones de Entrada
         if not data:
             return jsonify({'msg': 'No se recibieron datos'}), 400
         
@@ -29,7 +60,7 @@ def create_payment():
         if not all([orden_id, monto, metodo_pago]):
             return jsonify({'msg': 'Faltan campos requeridos: orden_id, monto, metodo_pago'}), 400
         
-        # Validar que el monto sea positivo
+        # Validación Numérica (Monto)
         try:
             monto = float(monto)
             if monto <= 0:
@@ -37,12 +68,12 @@ def create_payment():
         except (ValueError, TypeError):
             return jsonify({'msg': 'Monto invalido'}), 400
         
-        # Buscar la orden
+        # Validación de Negocio (Orden - Estado)
         work_order = Orden.query.get(orden_id)
         if not work_order:
             return jsonify({'msg': 'Orden no encontrada'}), 404
         
-        # VALIDACION CRITICA: Verificar que la orden este finalizada
+        # Regla: Solo se cobra por trabajos termiandos
         estado_orden = work_order.estado.nombre_estado if work_order.estado else None
         if estado_orden not in ['Finalizado', 'Entregado']:
             return jsonify({
@@ -51,9 +82,9 @@ def create_payment():
                 "estados_permitidos": ["Finalizado", "Entregado"]
             }), 400
         
-        # Validar que el monto no exceda el saldo pendiente
+        # Regla: No se puede pagar más de lo adeudado
         saldo_pendiente = work_order.calcular_saldo_pendiente()
-        if float(monto) > saldo_pendiente + 0.01:  # Tolerancia para decimales
+        if float(monto) > saldo_pendiente + 0.01:  # Tolerancia Floating Point
             return jsonify({
                 "msg": "El monto del pago excede el saldo pendiente",
                 "monto_solicitado": float(monto),
@@ -61,7 +92,7 @@ def create_payment():
                 "total_orden": work_order.total_estimado
             }), 400
         
-        # Crear el pago usando ORM (Mas seguro y compatible con Postgres)
+        # Ejecución Transaccional
         usuario_id = get_jwt_identity()
         fecha_pago = datetime.now()
         
@@ -78,9 +109,7 @@ def create_payment():
         db.session.add(nuevo_pago)
         db.session.commit()
         
-        payment_id = nuevo_pago.id
-        
-        # Calcular balance actualizado
+        # Respuesta Enriquecida con nuevo estado financiero
         balance = {
             'total_orden': work_order.total_estimado,
             'total_pagado': work_order.calcular_total_pagado(),
@@ -91,7 +120,7 @@ def create_payment():
         return jsonify({
             'msg': 'Pago registrado exitosamente',
             'payment': {
-                'id': payment_id,
+                'id': nuevo_pago.id,
                 'orden_id': orden_id,
                 'monto': monto,
                 'metodo_pago': metodo_pago,
@@ -107,20 +136,23 @@ def create_payment():
         return jsonify({'msg': 'Error al crear el pago', 'error': str(e)}), 500
 
 
+# ==============================================================================
+# Endpoint: Historial de Pagos
+# ==============================================================================
 @payments_bp.route('/history', methods=['GET'])
 @jwt_required()
 def get_payment_history():
     """
-    Obtiene el historial de pagos con informacion detallada.
-    Incluye: cliente_nombre, placa del vehiculo, y detalles del pago.
+    Consulta transacciones pasadas con filtros opcionales.
+    Realiza JOINs complejos para devolver contexto del Cliente y Auto.
     """
     try:
-        # Parametros opcionales para filtrado
+        # Filtros
         fecha_inicio = request.args.get('fecha_inicio')
         fecha_fin = request.args.get('fecha_fin')
         per_page = int(request.args.get('per_page', 1000))
         
-        # Query con JOINS para obtener informacion completa
+        # Query Builder con JOINs
         query = db.session.query(
             Pago.id,
             Pago.orden_id,
@@ -141,19 +173,16 @@ def get_payment_history():
             Pago.activo == True
         )
         
-        # Aplicar filtros de fecha si existen
         if fecha_inicio:
             query = query.filter(Pago.fecha_pago >= fecha_inicio)
         if fecha_fin:
             query = query.filter(Pago.fecha_pago <= fecha_fin)
         
-        # Ordenar por fecha mas reciente primero
         query = query.order_by(Pago.fecha_pago.desc())
         
-        # Limitar resultados
         payments = query.limit(per_page).all()
         
-        # Formatear respuesta
+        # Serialización Manual
         result = []
         for p in payments:
             result.append({
@@ -174,14 +203,17 @@ def get_payment_history():
         return jsonify({'msg': 'Error al obtener historial', 'error': str(e)}), 500
 
 
+# ==============================================================================
+# Endpoint: Detalle de Pago Individual
+# ==============================================================================
 @payments_bp.route('/<int:payment_id>', methods=['GET'])
 @jwt_required()
 def get_payment(payment_id):
     """
-    Obtiene los detalles de un pago especifico.
+    Recupera información puntual de un recibo o pago por ID.
+    Usa SQL crudo (text) para performance en consultas complejas.
     """
     try:
-        # Query con informacion detallada
         query = text("""
             SELECT 
                 p.id,
@@ -225,24 +257,24 @@ def get_payment(payment_id):
         return jsonify({'msg': 'Error al obtener el pago', 'error': str(e)}), 500
 
 
+# ==============================================================================
+# Endpoint: Resumen de Ingresos (KPI)
+# ==============================================================================
 @payments_bp.route('/revenue', methods=['GET'])
 @jwt_required()
 def get_revenue_summary():
     """
-    Obtiene el resumen de ingresos: total recaudado y cantidad de pagos.
+    Calcula totales para KPIs financieros.
     """
     try:
-        # Parametros opcionales para filtrado
         fecha_inicio = request.args.get('fecha_inicio')
         fecha_fin = request.args.get('fecha_fin')
         
-        # Query base
         query = db.session.query(
             db.func.sum(Pago.monto).label('total_ingresos'),
             db.func.count(Pago.id).label('total_pagos')
         ).filter(Pago.activo == True)
         
-        # Aplicar filtros de fecha si existen
         if fecha_inicio:
             query = query.filter(Pago.fecha_pago >= fecha_inicio)
         if fecha_fin:
@@ -262,23 +294,23 @@ def get_revenue_summary():
         return jsonify({'msg': 'Error al obtener resumen', 'error': str(e)}), 500
 
 
+# ==============================================================================
+# Endpoint: Balance de Cuenta de Orden
+# ==============================================================================
 @payments_bp.route('/order/<int:orden_id>/balance', methods=['GET'])
 @jwt_required()
 def get_order_payment_balance(orden_id):
     """
-    Obtiene el balance de pagos para una orden especifica.
-    Retorna: total_estimado, total_pagado, saldo_pendiente, pagado_completamente, lista de pagos.
+    Estado de cuenta detallado de una orden.
+    Retorna cuánto se estimó, cuánto se ha pagado y el remanente.
     """
     try:
-        # Buscar la orden
         orden = Orden.query.get(orden_id)
         if not orden:
             return jsonify({'msg': 'Orden no encontrada'}), 404
         
-        # Obtener pagos de la orden
         pagos = Pago.query.filter_by(orden_id=orden_id, activo=True).all()
         
-        # Formatear lista de pagos
         pagos_list = []
         for pago in pagos:
             pagos_list.append({
@@ -289,7 +321,6 @@ def get_order_payment_balance(orden_id):
                 'fecha_pago': pago.fecha_pago.isoformat() if pago.fecha_pago else None
             })
         
-        # Calcular balance
         balance = {
             'orden_id': orden_id,
             'total_estimado': float(orden.total_estimado) if orden.total_estimado else 0.0,

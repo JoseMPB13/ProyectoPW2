@@ -1,3 +1,5 @@
+import Toast from '../utils/toast.js';
+
 export default class ServiceView {
     constructor() {
         this.contentArea = document.getElementById('contentArea');
@@ -211,11 +213,10 @@ export default class ServiceView {
     }
 
     showSuccess(msg) {
-        // Implement customized toast or alert
-        alert(msg);
+        Toast.success(msg);
     }
 
     showError(msg) {
-        alert(msg);
+        Toast.error(msg);
     }
 }

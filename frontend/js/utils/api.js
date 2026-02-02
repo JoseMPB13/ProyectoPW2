@@ -158,4 +158,27 @@ export default class API {
             throw error;
         }
     }
+
+    /**
+     * Realiza una petición GET y retorna un Blob (para descargas).
+     * @param {string} endpoint - Endpoint relativo.
+     * @returns {Promise<Blob>} Blob de la respuesta.
+     */
+    async getBlob(endpoint) {
+        try {
+            const response = await fetch(`${this.baseURL}${endpoint}`, {
+                method: 'GET',
+                headers: this._getHeaders()
+            });
+
+            if (!response.ok) {
+                 throw new Error(`Error descargando archivo: ${response.statusText}`);
+            }
+
+            return response.blob();
+        } catch (error) {
+            console.error(`Error en GET Blob ${endpoint}:`, error);
+            throw error;
+        }
+    }
 }

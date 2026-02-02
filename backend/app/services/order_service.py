@@ -3,6 +3,28 @@ from app.models import Orden, OrdenDetalleServicio, OrdenDetalleRepuesto, Servic
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import func
 
+# ==============================================================================
+# ENCABEZADO DEL ARCHIVO (Visión Macro)
+# ==============================================================================
+# Propósito:
+#   Gestiona el ciclo de vida de las Órdenes de Trabajo (Creación, Actualización, Consulta).
+#   Es el "cerebro" central de la operación del taller.
+#
+# Flujo Lógico Central:
+#   1. Recepción de datos crudos del controlador/API.
+#   2. Validación de negocio (existencia de auto, stock suficiente, técnico activo).
+#   3. Gestión Transaccional (Atomicidad): Todas las operaciones (crear orden + detalles + descontar stock)
+#      ocurren en una sola transacción. Si algo falla, se hace rollback de todo.
+#   4. Estrategia de Actualización: "Full Synchronization". 
+#      El frontend envía el estado completo deseado de la orden (lista completa de items).
+#      El servicio calcula las diferencias (Diff): Qué borrar, qué agregar y qué actualizar,
+#      gestionando automáticamente la devolución o consumo de stock.
+#
+# Interacciones:
+#   - Interactúa con Modelos: Orden, Auto, Usuario, Servicio, Repuesto.
+#   - Llamado por: `routes/orders.py` (API REST).
+# ==============================================================================
+
 class OrderService:
     """
     Servicio que encapsula la lógica de negocio relacionada con Órdenes de Trabajo.
@@ -16,47 +38,52 @@ class OrderService:
     @staticmethod
     def create_order_with_details(data):
         """
-        Crea una nueva orden de trabajo con servicios y repuestos en una sola transacción.
+        Crea una nueva orden de trabajo con servicios y repuestos en una sola transacción atómica.
+        
+        Descripción:
+            Orquesta la creación de la cabecera de la orden y sus líneas de detalle.
+            Verifica y descuenta stock de repuestos en tiempo real.
         
         Args:
-            data (dict): Diccionario con:
-                - auto_id (int): ID del auto
-                - tecnico_id (int): ID del técnico
-                - estado_id (int): ID del estado inicial
-                - problema_reportado (str): Descripción del problema
-                - diagnostico (str, opcional): Diagnóstico técnico
-                - servicios (list, opcional): Lista de dicts con {servicio_id, precio_aplicado (opcional)}
-                - repuestos (list, opcional): Lista de dicts con {repuesto_id, cantidad, precio_unitario_aplicado (opcional)}
+            data (dict): Diccionario conteniendo:
+                - auto_id (int): ID del auto existente.
+                - tecnico_id (int): ID del técnico responsable.
+                - estado_id (int): ID del estado inicial (ej: 'Pendiente').
+                - problema_reportado (str): Texto descriptivo.
+                - diagnostico (str, optional): Texto técnico.
+                - servicios (list, optional): Lista de {servicio_id, [precio_aplicado]}.
+                - repuestos (list, optional): Lista de {repuesto_id, cantidad, [precio_unitario_aplicado]}.
         
         Returns:
-            Orden: La orden creada con todos sus detalles
+            Orden: La instancia de orden persistida con todos sus detalles vinculados.
             
         Raises:
-            ValueError: Si hay errores de validación
-            SQLAlchemyError: Si hay errores en la transacción
+            ValueError: Si fallan validaciones de negocio (stock insuficiente, IDs no válidos).
+            Exception: Si ocurre error de base de datos (SQLAlchemyError).
         """
         try:
-            # Validar auto
+            # Lógica Interna: Validaciones de Existencia
+            # Usamos filter_by(activo=True) para asegurar Integridad Referencial Lógica.
             auto = Auto.query.filter_by(id=data['auto_id'], activo=True).first()
             if not auto:
                 raise ValueError("Auto no encontrado o inactivo")
 
-            # Validar técnico
             tecnico = Usuario.query.filter_by(id=data['tecnico_id'], activo=True).first()
             if not tecnico:
                 raise ValueError("Técnico no encontrado o inactivo")
 
-            # Crear la orden principal
+            # Lógica Interna: Creación de Cabecera
             new_order = Orden(
                 auto_id=data['auto_id'],
                 tecnico_id=data['tecnico_id'],
                 estado_id=data['estado_id'],
                 problema_reportado=data.get('problema_reportado', ''),
                 diagnostico=data.get('diagnostico', ''),
-                total_estimado=0.0,
+                total_estimado=0.0, # Se calculará al final
                 activo=True
             )
             
+            # Manejo de fechas opcionales
             if 'fecha_entrega' in data and data['fecha_entrega']:
                 new_order.fecha_entrega = data['fecha_entrega']
                 
@@ -64,14 +91,16 @@ class OrderService:
                 new_order.fecha_ingreso = data['fecha_ingreso']
 
             db.session.add(new_order)
-            db.session.flush()  # Obtener el ID sin hacer commit
+            db.session.flush()  # CRÍTICO: Genera el ID de la orden sin confirmar la transacción (commit)
 
-            # Procesar servicios
+            # ==============================================================================
+            # DETALLES: SERVICIOS
+            # ==============================================================================
             servicios_data = data.get('servicios', [])
             total_servicios = 0.0
             
             for item in servicios_data:
-                # Soporte para lista de IDs [1, 4] o lista de objetos [{id:1}, ...]
+                # Normalización de entrada: Soporta tanto lista de IDs [1, 2] como objetos [{id:1}, {id:2}]
                 if isinstance(item, int):
                     servicio_id = item
                     precio_aplicado = None
@@ -79,11 +108,12 @@ class OrderService:
                     servicio_id = item.get('servicio_id') or item.get('id')
                     precio_aplicado = item.get('precio_aplicado')
 
+                # Validación
                 servicio = Servicio.query.filter_by(id=servicio_id, activo=True).first()
                 if not servicio:
                     raise ValueError(f"Servicio con ID {servicio_id} no encontrado")
                 
-                # Usar precio proporcionado o el precio actual del servicio
+                # Determinación de Precio: Prioridad al precio manual, fallback al catálogo.
                 actual_precio = precio_aplicado if precio_aplicado is not None else servicio.precio
                 
                 detalle = OrdenDetalleServicio(
@@ -94,7 +124,9 @@ class OrderService:
                 db.session.add(detalle)
                 total_servicios += actual_precio
 
-            # Procesar repuestos con validación y descuento de stock
+            # ==============================================================================
+            # DETALLES: REPUESTOS (Gestión de Stock)
+            # ==============================================================================
             repuestos_data = data.get('repuestos', [])
             total_repuestos = 0.0
             
@@ -106,17 +138,16 @@ class OrderService:
                 if not repuesto:
                     raise ValueError(f"Repuesto con ID {repuesto_id} no encontrado")
                 
-                # Validar stock disponible
+                # Lógica de Negocio: Validación estricta de Stock
+                # No permitimos vender lo que no tenemos.
                 if repuesto.stock < cantidad:
                     raise ValueError(
                         f"Stock insuficiente para '{repuesto.nombre}'. "
                         f"Disponible: {repuesto.stock}, Solicitado: {cantidad}"
                     )
                 
-                # Usar precio proporcionado o el precio actual del repuesto
                 precio_unitario = item.get('precio_unitario_aplicado', repuesto.precio_venta)
                 
-                # Crear detalle
                 detalle = OrdenDetalleRepuesto(
                     orden_id=new_order.id,
                     repuesto_id=repuesto.id,
@@ -125,22 +156,24 @@ class OrderService:
                 )
                 db.session.add(detalle)
                 
-                # Descontar stock
+                # Efecto colateral: Descuento de stock en DB
                 repuesto.stock -= cantidad
                 total_repuestos += (precio_unitario * cantidad)
 
-            # Actualizar total estimado
+            # Lógica Interna: Cálculo y Persistencia
             new_order.total_estimado = total_servicios + total_repuestos
 
-            # Commit de toda la transacción
+            # Commit final: Si llegamos aquí, todo es válido.
             db.session.commit()
             
             return new_order
 
         except ValueError as e:
+            # Control de Errores: Deshacer cambios parciales si falla validación de negocio
             db.session.rollback()
             raise e
         except SQLAlchemyError as e:
+            # Control de Errores: Deshacer si falla la BD
             db.session.rollback()
             raise Exception(f"Error en la base de datos: {str(e)}")
 
@@ -151,67 +184,48 @@ class OrderService:
     @staticmethod
     def update_order_with_details(order_id, data):
         """
-        Actualiza una orden existente con sincronización completa de servicios y repuestos.
+        Actualiza una orden existente aplicando una estrategia de "Sincronización Completa".
         
-        Estrategia de Sincronización:
-        - Compara los detalles actuales vs los nuevos
-        - Elimina detalles que ya no están en la lista (devuelve stock para repuestos)
-        - Agrega nuevos detalles (descuenta stock para repuestos)
-        - Actualiza cantidades existentes (ajusta stock según diferencia)
+        Descripción:
+            Recibe la 'imagen deseada' de la orden. El servicio se encarga de calcular
+            el delta (diferencias) con la base de datos:
+            - Items ausentes en 'data' -> Se eliminan (y se devuelve stock).
+            - Items nuevos en 'data' -> Se crean (y se consume stock).
+            - Items existentes -> Se actualizan cantidades (y se ajusta stock diferencial).
         
         Args:
-            order_id (int): ID de la orden a actualizar
-            data (dict): Diccionario con:
-                - tecnico_id (int, opcional): Nuevo técnico asignado
-                - estado_id (int, opcional): Nuevo estado
-                - problema_reportado (str, opcional): Actualización del problema
-                - diagnostico (str, opcional): Actualización del diagnóstico
-                - servicios (list): Lista COMPLETA de servicios que debe tener la orden
-                - repuestos (list): Lista COMPLETA de repuestos que debe tener la orden
+            order_id (int): ID de la orden.
+            data (dict): Datos actualizados (técnico, fechas, lista completa de servicios/repuestos).
         
         Returns:
-            Orden: La orden actualizada
-            
-        Raises:
-            ValueError: Si hay errores de validación
-            SQLAlchemyError: Si hay errores en la transacción
+            Orden: Objeto actualizado y refrescado.
         """
         try:
-            # Obtener la orden
+            # 1. Obtener la entidad a modificar
             order = Orden.query.filter_by(id=order_id, activo=True).first()
             if not order:
                 raise ValueError("Orden no encontrada")
 
-            # Actualizar campos básicos de la orden si se proporcionan
+            # 2. Actualización de campos escalares (Header)
             if 'tecnico_id' in data:
                 tecnico = Usuario.query.filter_by(id=data['tecnico_id'], activo=True).first()
                 if not tecnico:
                     raise ValueError("Técnico no encontrado o inactivo")
                 order.tecnico_id = data['tecnico_id']
             
-            if 'estado_id' in data:
-                order.estado_id = data['estado_id']
-            
-            if 'problema_reportado' in data:
-                order.problema_reportado = data['problema_reportado']
-            
-            if 'diagnostico' in data:
-                order.diagnostico = data['diagnostico']
-
-            if 'fecha_entrega' in data:
-                order.fecha_entrega = data['fecha_entrega']
-            
-            if 'fecha_ingreso' in data:
-                order.fecha_ingreso = data['fecha_ingreso']
+            if 'estado_id' in data: order.estado_id = data['estado_id']
+            if 'problema_reportado' in data: order.problema_reportado = data['problema_reportado']
+            if 'diagnostico' in data: order.diagnostico = data['diagnostico']
+            if 'fecha_entrega' in data: order.fecha_entrega = data['fecha_entrega']
+            if 'fecha_ingreso' in data: order.fecha_ingreso = data['fecha_ingreso']
 
             # ==============================================================================
             # SINCRONIZACIÓN DE SERVICIOS
             # ==============================================================================
-            
             if 'servicios' in data:
                 nuevos_servicios = data['servicios']
                 
-                # Normalizar lista de IDs o objetos
+                # Normalización a diccionario para búsqueda rápida O(1)
                 nuevos_servicios_map = {}
                 for item in nuevos_servicios:
                     if isinstance(item, int):
@@ -221,26 +235,28 @@ class OrderService:
                          sid = item.get('servicio_id') or item.get('id')
                          nuevos_servicios_map[sid] = item
                 
+                # Mapeo de estado actual en BD
                 servicios_actuales = {d.servicio_id: d for d in order.detalles_servicios}
                 nuevos_ids = set(nuevos_servicios_map.keys())
 
-                # ELIMINAR servicios que ya no están en la nueva lista
+                # PASO A: Eliminar (Delete)
+                # Si está en BD pero no en la nueva lista, se borra.
                 for servicio_id, detalle in servicios_actuales.items():
                     if servicio_id not in nuevos_ids:
                         db.session.delete(detalle)
                 
-                # AGREGAR o MANTENER servicios
+                # PASO B: Crear o Actualizar (Upsert logic)
                 for sid, s_data in nuevos_servicios_map.items():
                     servicio = Servicio.query.filter_by(id=sid, activo=True).first()
                     if not servicio:
                          raise ValueError(f"Servicio con ID {sid} no encontrado")
                     
                     if sid in servicios_actuales:
-                        # Ya existe, actualizar precio si se proporciona
+                        # Update: Si ya existe, solo actualizamos precio si cambió
                         if 'precio_aplicado' in s_data:
                             servicios_actuales[sid].precio_aplicado = s_data['precio_aplicado']
                     else:
-                        # No existe, crear nuevo detalle
+                        # Create: Nuevo registro
                         precio_aplicado = s_data.get('precio_aplicado', servicio.precio)
                         nuevo_detalle = OrdenDetalleServicio(
                             orden_id=order_id,
@@ -250,13 +266,12 @@ class OrderService:
                         db.session.add(nuevo_detalle)
 
             # ==============================================================================
-            # SINCRONIZACIÓN DE REPUESTOS CON GESTIÓN INTELIGENTE DE INVENTARIO
+            # SINCRONIZACIÓN DE REPUESTOS (Lógica Crítica de Inventario)
             # ==============================================================================
-            
             if 'repuestos' in data:
                 nuevos_repuestos = data['repuestos']
                 
-                # Normalizar repuestos
+                # Normalización
                 nuevos_repuestos_map = {}
                 for item in nuevos_repuestos:
                     rid = item.get('repuesto_id') or item.get('id')
@@ -265,15 +280,16 @@ class OrderService:
                 repuestos_actuales = {d.repuesto_id: d for d in order.detalles_repuestos}
                 nuevos_ids = set(nuevos_repuestos_map.keys())
                 
-                # ELIMINAR repuestos que ya no están en la nueva lista (DEVOLVER STOCK)
+                # PASO A: Eliminar -> Devolución de Stock
+                # Si quito un repuesto de la orden, debo devolverlo al estante.
                 for rid, detalle in repuestos_actuales.items():
                     if rid not in nuevos_ids:
                         repuesto = Repuesto.query.get(rid)
                         if repuesto:
-                            repuesto.stock += detalle.cantidad
+                            repuesto.stock += detalle.cantidad # Reembolso
                         db.session.delete(detalle)
                 
-                # AGREGAR nuevos repuestos o ACTUALIZAR cantidades existentes
+                # PASO B: Agregar/Actualizar
                 for rid, r_data in nuevos_repuestos_map.items():
                     nueva_cantidad = r_data.get('cantidad', 1)
                     
@@ -282,25 +298,27 @@ class OrderService:
                         raise ValueError(f"Repuesto con ID {rid} no encontrado")
                     
                     if rid in repuestos_actuales:
-                        # Ya existe, ajustar cantidad y stock
+                        # Update: Ajuste diferencial de stock
                         detalle_actual = repuestos_actuales[rid]
                         cantidad_actual = detalle_actual.cantidad
                         diferencia = nueva_cantidad - cantidad_actual
                         
                         if diferencia != 0:
+                            # Validar solo si estoy pidiendo MÁS (diferencia positiva)
                             if diferencia > 0 and repuesto.stock < diferencia:
                                 raise ValueError(
                                     f"Stock insuficiente para '{repuesto.nombre}'. "
                                     f"Disponible: {repuesto.stock}, Necesario: {diferencia}"
                                 )
-                            repuesto.stock -= diferencia
+                            # Si diferencia es negativa (estoy devolviendo), el stock aumenta (menos por menos da mas)
+                            repuesto.stock -= diferencia 
                             detalle_actual.cantidad = nueva_cantidad
                         
                         if 'precio_unitario_aplicado' in r_data:
                             detalle_actual.precio_unitario_aplicado = r_data['precio_unitario_aplicado']
                     
                     else:
-                        # No existe, crear nuevo detalle y descontar stock
+                        # Create: Nuevo consumo de stock
                         if repuesto.stock < nueva_cantidad:
                             raise ValueError(
                                 f"Stock insuficiente para '{repuesto.nombre}'. "
@@ -318,16 +336,16 @@ class OrderService:
                         db.session.add(nuevo_detalle)
                         repuesto.stock -= nueva_cantidad
 
-            # Recalcular total estimado
-            db.session.flush()  # Asegurar que los cambios estén disponibles
+            # 3. Recálculo de Totales Post-Procesamiento
+            # Hacemos flush para que las consultas SQL agregadas 'vean' los cambios pendientes en memoria
+            db.session.flush()
             OrderService._recalculate_order_total(order)
 
-            # Commit de toda la transacción
+            # 4. Confirmación
             db.session.commit()
             
-            # Refrescar la orden para obtener las relaciones actualizadas
+            # 5. Refresco para retornar datos limpios
             db.session.refresh(order)
-            
             return order
 
         except ValueError as e:
@@ -338,14 +356,17 @@ class OrderService:
             raise Exception(f"Error en la base de datos: {str(e)}")
 
     # ==============================================================================
-    # MÉTODOS AUXILIARES
+    # MÉTODOS AUXILIARES Y DE CONSULTA
     # ==============================================================================
 
     @staticmethod
     def _recalculate_order_total(order):
         """
-        Recalcula el total estimado de una orden usando consultas directas a la BD
-        para asegurar que se incluyan los cambios recientes (flush).
+        Recalcula el total estimado de una orden sumando sus servicios y repuestos.
+        
+        Lógica:
+            Ejecuta funciones de agregación SUM() en la BD para la orden dada.
+            Actualiza el campo 'total_estimado'. No hace commit.
         """
         # Sumar servicios
         total_servicios = db.session.query(db.func.sum(OrdenDetalleServicio.precio_aplicado))\
@@ -360,8 +381,11 @@ class OrderService:
     @staticmethod
     def recalculate_all_totals():
         """
-        Recalcula los totales de TODAS las órdenes activas.
-        Retorna estadísticas de correcciones.
+        Utilidad para mantenimiento: Recalcula los totales de TODAS las órdenes activas.
+        Útil si se detectan inconsistencias.
+        
+        Returns:
+            dict: Estadísticas {total, corrected}.
         """
         orders = Orden.query.filter_by(activo=True).all()
         count = 0
@@ -388,20 +412,11 @@ class OrderService:
         db.session.commit()
         return {"total": count, "corrected": corrected}
 
-    # ==============================================================================
-    # MÉTODOS DE CONSULTA
-    # ==============================================================================
-
     @staticmethod
     def get_order_by_id(order_id):
         """
         Obtiene una orden por su ID si está activa.
-        
-        Args:
-            order_id (int): ID de la orden
-            
-        Returns:
-            Orden: La orden encontrada o None
+        Returns: Orden o None.
         """
         return Orden.query.filter_by(id=order_id, activo=True).first()
 
@@ -410,25 +425,18 @@ class OrderService:
         """
         Obtiene órdenes registradas con paginación, filtros y búsqueda.
         
-        Args:
-            page (int): Número de página
-            per_page (int): Elementos por página
-            estado_id (int, opcional): Filtrar por estado
-            search (str, opcional): Término de búsqueda
-            client_id (int, opcional): Filtrar por ID de cliente
+        Parámetros:
+            - search: Busca por placa, marca o modelo (ILIKE).
+            - client_id: Filtra por dueño del vehículo.
             
         Returns:
-            Pagination: Objeto de paginación con las órdenes
+            Pagination: Objeto paginado de Flask-SQLAlchemy.
         """
         query = Orden.query.filter_by(activo=True).join(Auto)
 
         if estado_id:
             query = query.filter(Orden.estado_id == estado_id)
         
-        # Filtro por Cliente (Relación Orden -> Auto -> Cliente)
-        # Asumimos que Auto tiene cliente_id o similar relation.
-        # En models.py, Cliente tiene relationship 'autos' backref='cliente'.
-        # Esto implica que Auto tiene una columna 'cliente_id' (foreign key).
         if client_id:
             query = query.filter(Auto.cliente_id == client_id)
         
@@ -440,7 +448,7 @@ class OrderService:
                 (Auto.modelo.ilike(search_term))
             )
         
-        # Ordenar por fecha de ingreso descendente
+        # Ordenar por fecha de ingreso descendente (más recientes primero)
         query = query.order_by(Orden.fecha_ingreso.desc())
         
         return query.paginate(page=page, per_page=per_page, error_out=False)
@@ -448,17 +456,7 @@ class OrderService:
     @staticmethod
     def update_order_status(order_id, estado_id):
         """
-        Actualiza únicamente el estado de una orden.
-        
-        Args:
-            order_id (int): ID de la orden
-            estado_id (int): Nuevo estado
-            
-        Returns:
-            Orden: La orden actualizada
-            
-        Raises:
-            ValueError: Si la orden no existe
+        Actualiza únicamente el estado de una orden (transición de flujo).
         """
         order = Orden.query.filter_by(id=order_id, activo=True).first()
         if not order:
@@ -469,15 +467,13 @@ class OrderService:
         return order
 
     # ==============================================================================
-    # MÉTODOS LEGACY (Mantener compatibilidad con código existente)
+    # MÉTODOS LEGACY (Compatibilidad)
     # ==============================================================================
+    # Se mantienen por compatibilidad hacia atrás con controladores antiguos o scripts.
 
     @staticmethod
     def create_order(auto_id, tecnico_id, estado_id, problema_reportado=''):
-        """
-        Método legacy para crear orden sin detalles.
-        Se mantiene para compatibilidad con código existente.
-        """
+        """Wrapper legacy para crear orden sin detalles."""
         data = {
             'auto_id': auto_id,
             'tecnico_id': tecnico_id,
@@ -490,10 +486,7 @@ class OrderService:
 
     @staticmethod
     def add_service_to_order(order_id, servicio_id):
-        """
-        Método legacy para agregar un servicio.
-        Se mantiene para compatibilidad con código existente.
-        """
+        """Método legacy unitario. Se recomienda usar update_order_with_details."""
         order = Orden.query.filter_by(id=order_id, activo=True).first()
         if not order:
             raise ValueError("Orden no encontrada")
@@ -517,10 +510,7 @@ class OrderService:
 
     @staticmethod
     def add_repuesto_to_order(order_id, repuesto_id, cantidad=1):
-        """
-        Método legacy para agregar un repuesto.
-        Se mantiene para compatibilidad con código existente.
-        """
+        """Método legacy unitario. Se recomienda usar update_order_with_details."""
         order = Orden.query.filter_by(id=order_id, activo=True).first()
         if not order:
             raise ValueError("Orden no encontrada")
@@ -551,10 +541,7 @@ class OrderService:
 
     @staticmethod
     def calculate_order_total(order_id):
-        """
-        Método legacy para calcular total.
-        Se mantiene para compatibilidad con código existente.
-        """
+        """Método legacy."""
         order = Orden.query.get(order_id)
         if not order:
             return 0.0

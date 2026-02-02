@@ -1,21 +1,30 @@
 from flask import Blueprint, jsonify
 
 # ==============================================================================
-# Endpoint de Salud (Health Check)
+# ENCABEZADO DEL ARCHIVO (Health Check)
 # ==============================================================================
-# Utilizado por balanceadores de carga o sistemas de monitoreo para verificar
-# que el backend está corriendo y respondiendo.
+# Propósito:
+#   Punto de verificación de estado del sistema (Heartbeat).
+#   Utilizado por monitores de uptime y balanceadores de carga.
+#
+# Interacciones:
+#   - Infraestructura (AWS, Docker, K8s).
+#   - Frontend (Verificación inicial de conexión).
 # ==============================================================================
 
 health_bp = Blueprint("health", __name__)
 
+# ==============================================================================
+# Endpoint: Estado del Sistema
+# ==============================================================================
 @health_bp.route("/health", methods=["GET"])
 def health():
     """
-    Endpoint simple para verificar el estado del servidor.
-
+    Retorna estado positivo si el servidor de aplicación está activo.
+    Idealmente verificaría también conexión a DB.
+    
     Returns:
-        JSON: Estado 'ok' y mensaje de funcionamiento.
+        JSON: { status: 'ok', ... }
     """
     return jsonify({
         "status": "ok",

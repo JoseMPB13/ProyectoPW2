@@ -2,6 +2,24 @@ import API from '../utils/api.js';
 import InventoryView from '../views/InventoryView.js';
 import Toast from '../utils/toast.js';
 
+/**
+ * ============================================================================
+ * ENCABEZADO DEL ARCHIVO (Controlador de Inventario)
+ * ============================================================================
+ * Propósito:
+ *   Gestiona el stock de repuestos y partes.
+ *
+ * Flujo Lógico:
+ *   1. Inicialización: Carga listado de inventario.
+ *   2. Búsqueda: Filtrado local por ID/Nombre/Marca.
+ *   3. CRUD: Creación, actualización y borrado lógico de items.
+ *
+ * Interacciones:
+ *   - InventoryModel: Gestión de datos.
+ *   - InventoryView: Interfaz de usuario.
+ * ============================================================================
+ */
+
 export default class InventoryController {
     constructor(model, view) {
         this.model = model;
@@ -11,17 +29,26 @@ export default class InventoryController {
         this.currentSearch = '';
     }
 
+    /**
+     * Inicialización del controlador.
+     */
     async init() {
         this.bindEvents();
         await this.loadParts();
     }
 
+    /**
+     * Enlace de listeners de la vista.
+     */
     bindEvents() {
         this.view.onAction = (action, id) => this.handleAction(action, id);
         this.view.onSubmit = (data) => this.handleSubmit(data);
         this.view.bindSearch((query) => this.handleSearch(query));
     }
 
+    /**
+     * Lógica de Búsqueda Local.
+     */
     handleSearch(query) {
         this.currentSearch = query.toLowerCase().trim();
         const term = this.currentSearch;
@@ -39,12 +66,15 @@ export default class InventoryController {
         this.view.updatePartsList(filtered);
     }
 
+    /**
+     * Carga de datos desde Backend.
+     */
     async loadParts() {
         try {
             this.view.showLoading();
             this.parts = await this.model.getParts();
             
-            // Apply current search if exists (client side persistence)
+            // Persistencia del filtro actual al recargar
             let displayParts = this.parts;
             if(this.currentSearch) {
                 const term = this.currentSearch;
@@ -64,6 +94,9 @@ export default class InventoryController {
         }
     }
 
+    /**
+     * Router de acciones de items.
+     */
     async handleAction(action, id) {
         const part = this.parts.find(p => p.id == id);
         if (!part) return;
@@ -87,6 +120,9 @@ export default class InventoryController {
         }
     }
 
+    /**
+     * Gestión del Formulario (Crear/Editar).
+     */
     async handleSubmit(partData) {
         try {
             this.view.showLoading();
@@ -98,7 +134,7 @@ export default class InventoryController {
                 Toast.success('Repuesto creado correctamente');
             }
             this.view.closeModal();
-            this.loadParts();
+            this.loadParts(); // Recarga para ver cambios y resetear filtros si se desea
         } catch (error) {
             console.error('Error guardando repuesto:', error);
             Toast.error('Error al guardar repuesto');

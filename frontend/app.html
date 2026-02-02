@@ -217,13 +217,9 @@
       const wrapper = document.getElementById("wrapper");
       const toggleButton = document.getElementById("menu-toggle");
 
-      toggleButton.onclick = function () {
-        const sidebar = document.getElementById("sidebar-wrapper");
-        if (sidebar.style.display === "none") {
-          sidebar.style.display = "block";
-        } else {
-          sidebar.style.display = "none";
-        }
+      toggleButton.onclick = function (e) {
+        e.preventDefault();
+        wrapper.classList.toggle("toggled");
       };
     </script>
   </body>

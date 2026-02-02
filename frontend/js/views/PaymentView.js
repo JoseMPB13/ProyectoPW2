@@ -335,9 +335,9 @@ export default class PaymentView {
                                 <span class="input-group-text bg-light border-right-0 font-weight-bold text-muted">Bs.</span>
                                 <input type="number" id="cash-amount" class="form-control form-control-lg border-left-0 font-weight-bold text-dark" 
                                        value="${saldoPendiente.toFixed(2)}" step="0.01" min="0" 
-                                       max="${saldoPendiente.toFixed(2)}" style="font-size: 1.5rem;">
+                                       max="${saldoPendiente.toFixed(2)}" style="font-size: 1.5rem;" readonly>
                             </div>
-                            <small class="text-secondary mt-1 d-block">Máximo: Bs. ${this.formatCurrency(saldoPendiente)}</small>
+                            <small class="text-secondary mt-1 d-block">Monto fijo a cobrar (Saldo Pendiente)</small>
                         </div>
                     </div>
                     <div class="col-md-6">
@@ -383,7 +383,7 @@ export default class PaymentView {
                          <span class="input-group-text bg-light border-right-0 font-weight-bold text-muted">Bs.</span>
                         <input type="number" id="qr-amount" class="form-control form-control-lg border-left-0 text-center font-weight-bold" 
                                value="${saldoPendiente.toFixed(2)}" step="0.01" min="0" 
-                               max="${saldoPendiente.toFixed(2)}" style="font-size: 1.5rem;">
+                               max="${saldoPendiente.toFixed(2)}" style="font-size: 1.5rem;" readonly>
                     </div>
                 </div>
 
@@ -421,7 +421,7 @@ export default class PaymentView {
                         <span class="input-group-text bg-light border-right-0 font-weight-bold text-muted">Bs.</span>
                         <input type="number" id="card-amount" class="form-control form-control-lg border-left-0 font-weight-bold" 
                                value="${saldoPendiente.toFixed(2)}" step="0.01" min="0" 
-                               max="${saldoPendiente.toFixed(2)}" style="font-size: 1.5rem;">
+                               max="${saldoPendiente.toFixed(2)}" style="font-size: 1.5rem;" readonly>
                     </div>
                 </div>
 

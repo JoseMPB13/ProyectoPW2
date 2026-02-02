@@ -1,0 +1,403 @@
+openapi: 3.0.0
+info:
+  title: Taller Negreira API
+  description: API para gestión de taller mecánico (Clientes, Vehículos, Órdenes, Inventario y Pagos).
+  version: 1.0.0
+servers:
+  - url: http://localhost:5000
+    description: Servidor de Desarrollo Local
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    # --- Auth & Users ---
+    LoginRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          example: admin@taller.com
+        password:
+          type: string
+          format: password
+          example: 123456
+
+    LoginResponse:
+      type: object
+      properties:
+        access_token:
+          type: string
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        user:
+          $ref: "#/components/schemas/User"
+
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        nombre:
+          type: string
+        apellido_p:
+          type: string
+        correo:
+          type: string
+        rol_nombre:
+          type: string
+          enum: [admin, mecanico, recepcion]
+
+    # --- Clients & Vehicles ---
+    Client:
+      type: object
+      required:
+        - nombre
+        - apellido_p
+        - ci
+      properties:
+        id:
+          type: integer
+        ci:
+          type: string
+        nombre:
+          type: string
+        apellido_p:
+          type: string
+        correo:
+          type: string
+        celular:
+          type: string
+        autos:
+          type: array
+          items:
+            $ref: "#/components/schemas/Vehicle"
+
+    Vehicle:
+      type: object
+      required:
+        - plate
+        - brand
+        - model
+        - year
+      properties:
+        id:
+          type: integer
+        plate:
+          type: string
+          example: ABC-123
+        brand:
+          type: string
+          example: Toyota
+        model:
+          type: string
+          example: Corolla
+        year:
+          type: integer
+          example: 2020
+        color:
+          type: string
+          example: Blanco
+        cliente_id:
+          type: integer
+
+    # --- Orders ---
+    Order:
+      type: object
+      properties:
+        id:
+          type: integer
+        auto_id:
+          type: integer
+        tecnico_id:
+          type: integer
+        estado_nombre:
+          type: string
+          enum: [Pendiente, En Proceso, Finalizado, Entregado]
+        problema_reportado:
+          type: string
+        total_estimado:
+          type: number
+        saldo_pendiente:
+          type: number
+        detalles_servicios:
+          type: array
+          items:
+            $ref: "#/components/schemas/Service"
+        detalles_repuestos:
+          type: array
+          items:
+            $ref: "#/components/schemas/Part"
+
+    CreateOrderRequest:
+      type: object
+      required:
+        - client_id
+        - vehicle_id
+        - technician_id
+      properties:
+        client_id:
+          type: integer
+        vehicle_id:
+          type: integer
+        technician_id:
+          type: integer
+        reported_problem:
+          type: string
+          example: Ruido en el motor al frenar
+        services:
+          type: array
+          items:
+            type: object
+            properties:
+              service_id:
+                type: integer
+              price:
+                type: number
+        parts:
+          type: array
+          items:
+            type: object
+            properties:
+              part_id:
+                type: integer
+              quantity:
+                type: integer
+              price:
+                type: number
+
+    # --- Inventory & Services ---
+    Service:
+      type: object
+      properties:
+        id:
+          type: integer
+        nombre:
+          type: string
+        precio:
+          type: number
+
+    Part:
+      type: object
+      properties:
+        id:
+          type: integer
+        nombre:
+          type: string
+        stock:
+          type: integer
+        precio_venta:
+          type: number
+
+    # --- Payments ---
+    PaymentRequest:
+      type: object
+      required:
+        - orden_id
+        - monto
+        - metodo_pago
+      properties:
+        orden_id:
+          type: integer
+        monto:
+          type: number
+          example: 50.00
+        metodo_pago:
+          type: string
+          enum: [Efectivo, QR, Tarjeta]
+        referencia:
+          type: string
+          example: REF-123456
+
+paths:
+  # --- AUTH ---
+  /auth/login:
+    post:
+      summary: Iniciar Sesión
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Login exitoso
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginResponse"
+        "401":
+          description: Credenciales inválidas
+
+  # --- CLIENTS ---
+  /clients:
+    get:
+      summary: Listar Clientes
+      tags: [Clients]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: search
+          schema:
+            type: string
+          description: Buscar por nombre o CI
+        - in: query
+          name: page
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Lista paginada de clientes
+    post:
+      summary: Crear Cliente
+      tags: [Clients]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Client"
+      responses:
+        "201":
+          description: Cliente creado
+
+  /clients/{client_id}/vehicles:
+    post:
+      summary: Agregar Vehículo a Cliente
+      tags: [Clients]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: client_id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Vehicle"
+      responses:
+        "201":
+          description: Vehículo asociado exitosamente
+
+  # --- ORDERS ---
+  /orders:
+    get:
+      summary: Listar Órdenes
+      tags: [Orders]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: status
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Lista de órdenes
+    post:
+      summary: Crear Orden de Trabajo
+      tags: [Orders]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateOrderRequest"
+      responses:
+        "201":
+          description: Orden creada
+
+  /orders/{id}:
+    put:
+      summary: Editar Orden
+      tags: [Orders]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status_id:
+                  type: integer
+                service_ids:
+                  type: array
+                  items:
+                    type: integer
+      responses:
+        "200":
+          description: Orden actualizada
+
+  # --- INVENTORY ---
+  /inventory:
+    get:
+      summary: Listar Repuestos
+      tags: [Inventory]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Catálogo de repuestos
+
+  # --- PAYMENTS ---
+  /payments:
+    post:
+      summary: Registrar Pago
+      tags: [Payments]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PaymentRequest"
+      responses:
+        "201":
+          description: Pago registrado
+
+  /payments/history:
+    get:
+      summary: Historial de Pagos
+      tags: [Payments]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Lista histórica de transacciones
+
+  # --- SERVICES ---
+  /services:
+    get:
+      summary: Listar Servicios (Mano de Obra)
+      tags: [Services]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Catálogo de servicios

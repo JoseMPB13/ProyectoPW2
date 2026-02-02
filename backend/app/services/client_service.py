@@ -2,67 +2,90 @@ from app import db
 from app.models import Cliente, Auto
 from sqlalchemy.exc import IntegrityError
 
+# ==============================================================================
+# ENCABEZADO DEL ARCHIVO (Visión Macro)
+# ==============================================================================
+# Propósito:
+#   Servicio central para la gestión de la cartera de Clientes y sus Vehículos.
+#   Abstrae las operaciones de base de datos (CRUD) relacionadas con personas y activos.
+#
+# Flujo Lógico Central:
+#   1. Recepción de datos validados.
+#   2. Verificación de unicidad (CI, Correo, Placa) para evitar duplicados.
+#   3. Persistencia en tablas `clientes` y `autos`.
+#   4. Manejo de relaciones (un cliente tiene muchos autos).
+#
+# Interacciones:
+#   - Interactúa con Modelos: `Cliente`, `Auto`.
+#   - Llamado por: `routes/clients.py`, `routes/vehicles.py`.
+# ==============================================================================
+
 class ClientService:
     """
-    Servicio para la gestión de Clientes y sus Vehículos.
+    Servicio de Dominio: Gestión de Clientes y Vehículos.
+    Encapsula lógica de negocio como validación de duplicados y asociación.
     """
+
+    # ==============================================================================
+    # GESTIÓN DE CLIENTES
+    # ==============================================================================
 
     @staticmethod
     def create_client(first_name, last_name, ci, email=None, phone=None, address=None):
         """
-        Crea un nuevo cliente.
+        Registra un nuevo cliente en el sistema.
 
         Args:
-            first_name (str): Nombre.
-            last_name (str): Apellido.
-            email (str, optional): Email.
-            phone (str, optional): Teléfono (Celular).
-            address (str, optional): Dirección.
+            first_name (str): Nombre(s) del cliente.
+            last_name (str): Apellido Paterno.
+            ci (str): Cédula de Identidad (Debe ser única).
+            email (str, optional): Correo electrónico (Debe ser único).
+            phone (str, optional): Número de celular.
+            address (str, optional): Dirección de domicilio.
 
         Returns:
-            Cliente: Cliente creado.
-
+            Cliente: Instancia persistida del nuevo cliente.
+        
         Raises:
-            ValueError: Si el email ya existe (IntegrityError).
+            ValueError: Si el email o CI ya están registrados.
         """
-        # Mapping to Spanish model fields
-        # Note: Cliente model has nombre, apellido_p, apellido_m, correo, celular, direccion
-        # We map last_name to apellido_p. apellido_m is left None/Empty if not provided.
-
+        # Mapeo de datos (Adapter Pattern implícito)
+        # Adaptamos los argumentos de entrada a la estructura del modelo SQLAlchemy
         new_client = Cliente(
             nombre=first_name,
             apellido_p=last_name,
             ci=ci,
             correo=email,
             celular=phone,
-            direccion=address,
-            # apellido_m can be passed if we update signature, for now None
+            direccion=address
         )
         try:
+            # Lógica Transaccional
             db.session.add(new_client)
             db.session.commit()
             return new_client
         except IntegrityError:
+            # Lógica Interna: Manejo de Colisiones
+            # Si la BD lanza error de restricción única (UniqueConstraint), hacemos rollback y retornamos error amigable.
             db.session.rollback()
-            # Check what failed (ci or correo?)
-            # Assuming correo for this context
             raise ValueError("El correo o CI ya está registrado (verifique datos únicos)")
 
     @staticmethod
     def get_all_clients(page=1, per_page=10, search=None):
         """
-        Retorna clientes con paginación y búsqueda.
-        
+        Recupera el listado de clientes aplicando paginación y filtros de búsqueda.
+
         Args:
-            page (int): Página actual.
-            per_page (int): Items por página.
-            search (str, optional): Término de búsqueda (nombre, apellido, email).
+            page (int): Número de página actual.
+            per_page (int): Cantidad de registros por página.
+            search (str, optional): Criterio de búsqueda (coincidencia parcial en nombre, apellido o correo).
 
         Returns:
-            Pagination: Objeto de paginación SQLAlchemy.
+            Pagination: Objeto de paginación de Flask-SQLAlchemy.
         """
         query = Cliente.query
         
+        # Filtro dinámico (SQL LIKE)
         if search:
             search_term = f"%{search}%"
             query = query.filter(
@@ -71,32 +94,82 @@ class ClientService:
                 (Cliente.correo.ilike(search_term))
             )
             
+        # Ordenamiento: Más recientes primero
         return query.order_by(Cliente.creado_at.desc()).paginate(page=page, per_page=per_page, error_out=False)
         
     @staticmethod
     def get_client_by_id(client_id):
-        """Retorna un cliente por ID."""
+        """
+        Busca un cliente por su ID primario.
+
+        Returns:
+            Cliente | None: Objeto cliente si existe, sino None.
+        """
         return Cliente.query.get(client_id)
+
+    @staticmethod
+    def update_client(client_id, nombre=None, apellido_p=None, apellido_m=None, ci=None, correo=None, celular=None, direccion=None):
+        """
+        Actualiza la información de un cliente existente.
+
+        Args:
+            client_id (int): ID del cliente a modificar.
+            **kwargs: Campos opcionales a actualizar.
+
+        Returns:
+            Cliente: El objeto actualizado.
+        
+        Raises:
+            ValueError: Si el cliente no existe o los nuevos datos causan conflicto de unicidad.
+        """
+        client = Cliente.query.get(client_id)
+        if not client:
+            raise ValueError("Cliente no encontrado")
+
+        # Actualización condicional (Patch)
+        # Solo actualizamos los campos que vienen con valor (no None)
+        if nombre: client.nombre = nombre
+        if apellido_p: client.apellido_p = apellido_p
+        if apellido_m is not None: client.apellido_m = apellido_m 
+        if ci: client.ci = ci
+        if correo: client.correo = correo
+        if celular: client.celular = celular
+        if direccion: client.direccion = direccion
+
+        try:
+            db.session.commit()
+            return client
+        except IntegrityError:
+            db.session.rollback()
+            raise ValueError("El correo o CI ya está registrado en otro cliente")
+        except Exception as e:
+            db.session.rollback()
+            raise e
+
+    # ==============================================================================
+    # GESTIÓN DE VEHÍCULOS
+    # ==============================================================================
 
     @staticmethod
     def add_vehicle(client_id, plate, brand, model, year, color=None):
         """
-        Asocia un vehículo a un cliente.
+        Registra un nuevo vehículo y lo asocia a un cliente.
 
         Args:
-            client_id (int): ID del cliente dueño.
-            plate (str): Placa.
-            brand (str): Marca.
-            model (str): Modelo.
-            year (int): Año.
-            color (str, optional): Color (mapped from vin/color args).
+            client_id (int): ID del propietario.
+            plate (str): Placa/Patente (Única en el sistema).
+            brand (str): Marca (ej: Toyota).
+            model (str): Modelo (ej: Corolla).
+            year (int): Año de fabricación.
+            color (str, optional): Color del vehículo.
 
         Returns:
-            Auto: Vehículo creado.
+            Auto: El vehículo creado.
 
         Raises:
-            ValueError: Si cliente no existe o placa duplicada.
+            ValueError: Si el cliente no existe o la placa ya está registrada.
         """
+        # Validación de integridad relacional
         client = Cliente.query.get(client_id)
         if not client:
             raise ValueError("Cliente no encontrado")
@@ -116,12 +189,18 @@ class ClientService:
             return new_vehicle
         except IntegrityError:
             db.session.rollback()
-            raise ValueError("La placa ya existe")
+            raise ValueError(f"La placa '{plate}' ya existe en el sistema")
 
     @staticmethod
     def get_client_vehicles(client_id):
         """
-        Obtiene los vehículos de un cliente específico.
+        Obtiene la lista de todos los vehículos pertenecientes a un cliente.
+
+        Args:
+            client_id (int): ID del cliente.
+
+        Returns:
+            List[Auto]: Lista de objetos Auto.
         
         Raises:
             ValueError: Si el cliente no existe.
@@ -129,21 +208,34 @@ class ClientService:
         client = Cliente.query.get(client_id)
         if not client:
             raise ValueError("Cliente no encontrado")
-        # Relationship in Cliente is 'autos'
+        
+        # Uso de la relación 'backref' definida en el modelo
         return client.autos
 
     @staticmethod
     def update_vehicle(vehicle_id, plate=None, brand=None, model=None, year=None, color=None):
         """
-        Actualiza un vehículo existente.
+        Actualiza los datos de un vehículo existente.
+
+        Args:
+            vehicle_id (int): ID del vehículo.
+            **kwargs: Campos a actualizar.
+
+        Returns:
+            Auto: Vehículo actualizado.
+            
+        Raises:
+            ValueError: Si la nueva placa ya existe en otro vehículo.
         """
         vehicle = Auto.query.get(vehicle_id)
         if not vehicle:
             raise ValueError("Vehículo no encontrado")
 
+        # Lógica de Negocio: Validación de unicidad de placa
+        # Si se intenta cambiar la placa, verificar que no pertenezca a OTRO auto.
         if plate and plate != vehicle.placa:
-            # Check unique plate if changed
-            if Auto.query.filter_by(placa=plate).first():
+            conflict = Auto.query.filter_by(placa=plate).first()
+            if conflict:
                 raise ValueError(f"La placa {plate} ya está registrada en otro vehículo")
             vehicle.placa = plate
         
@@ -158,33 +250,6 @@ class ClientService:
         except IntegrityError:
             db.session.rollback()
             raise ValueError("Error de integridad al actualizar vehículo")
-        except Exception as e:
-            db.session.rollback()
-            raise e
-
-    @staticmethod
-    def update_client(client_id, nombre=None, apellido_p=None, apellido_m=None, ci=None, correo=None, celular=None, direccion=None):
-        """
-        Actualiza los datos de un cliente.
-        """
-        client = Cliente.query.get(client_id)
-        if not client:
-            raise ValueError("Cliente no encontrado")
-
-        if nombre: client.nombre = nombre
-        if apellido_p: client.apellido_p = apellido_p
-        if apellido_m is not None: client.apellido_m = apellido_m 
-        if ci: client.ci = ci
-        if correo: client.correo = correo
-        if celular: client.celular = celular
-        if direccion: client.direccion = direccion
-
-        try:
-            db.session.commit()
-            return client
-        except IntegrityError:
-            db.session.rollback()
-            raise ValueError("El correo o CI ya está registrado")
         except Exception as e:
             db.session.rollback()
             raise e

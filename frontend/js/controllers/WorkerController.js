@@ -2,20 +2,34 @@ import WorkerModel from '../models/WorkerModel.js';
 import WorkerView from '../views/WorkerView.js';
 
 /**
- * Controlador de Trabajadores
- * Coordina la lógica de gestión de trabajadores entre vista y modelo.
+ * ============================================================================
+ * ENCABEZADO DEL ARCHIVO (Controlador de RRHH)
+ * ============================================================================
+ * Propósito:
+ *   Gestiona el personal (Trabajadores) del taller.
+ *   
+ * Flujo Lógico:
+ *   1. Inicialización: Carga listado de trabajadores.
+ *   2. Filtros: Por Rol (Mecánico/Recepción) y Búsqueda de Texto.
+ *   3. CRUD: Gestión de usuarios del sistema.
+ *
+ * Interacciones:
+ *   - WorkerModel: Datos de usuarios/roles.
+ *   - WorkerView: Interfaz de gestión.
+ * ============================================================================
  */
+
 export default class WorkerController {
     constructor() {
         this.model = new WorkerModel();
         this.view = new WorkerView();
         
-        // Estado interno
+        // Estado interno del controlador
         this.currentRoleFilter = null;
         this.currentSearch = null;
         this.allWorkers = [];
 
-        // Vincular eventos
+        // Binding de eventos
         this.view.bindNewWorker(this.handleNewWorker.bind(this));
         this.view.bindSubmitWorker(this.handleSubmitWorker.bind(this));
         this.view.bindCloseModal();
@@ -33,6 +47,7 @@ export default class WorkerController {
 
     /**
      * Carga los trabajadores desde el servidor.
+     * Soporta filtrado por rol en el backend (optimización).
      */
     async loadWorkers() {
         try {
@@ -47,12 +62,12 @@ export default class WorkerController {
     }
 
     /**
-     * Filtra y renderiza los trabajadores según búsqueda y filtros.
+     * Aplica filtros locales (Búsqueda) y renderiza.
      */
     filterAndRender() {
         let filtered = this.allWorkers;
 
-        // Aplicar búsqueda
+        // Aplicar búsqueda de texto
         if (this.currentSearch) {
             const search = this.currentSearch.toLowerCase();
             filtered = filtered.filter(w => 
@@ -69,14 +84,14 @@ export default class WorkerController {
     }
 
     /**
-     * Maneja la creación de un nuevo trabajador.
+     * Abre el modal para crear nuevo trabajador.
      */
     handleNewWorker() {
         this.view.renderWorkerModal();
     }
 
     /**
-     * Maneja el envío del formulario de trabajador.
+     * Maneja el envío del formulario de trabajador (Crear/Editar).
      * @param {Object} formData - Datos del formulario.
      */
     async handleSubmitWorker(formData) {
@@ -84,7 +99,7 @@ export default class WorkerController {
             if (formData.id) {
                 // Actualizar existente
                 const updateData = { ...formData };
-                // Si la contraseña está vacía, no enviarla para evitar que se resetee
+                // Seguridad: Si password está vacío, no lo enviamos para no sobrescribir/resetear
                 if (!updateData.password) {
                     delete updateData.password;
                 }
@@ -106,15 +121,14 @@ export default class WorkerController {
     }
 
     /**
-     * Maneja las acciones de la tabla (ver, editar, eliminar).
-     * @param {string} action - Acción a realizar.
-     * @param {string} id - ID del trabajador.
+     * Router de acciones de la tabla.
      */
     async handleWorkerAction(action, id) {
         if (action === 'view') {
             try {
                 const worker = await this.model.getWorkerById(id);
-                alert(JSON.stringify(worker, null, 2)); // Temporal
+                // TODO: Implementar modal de detalles real
+                alert(JSON.stringify(worker, null, 2)); 
             } catch (error) {
                 this.view.showError('No se pudo cargar el trabajador');
             }
@@ -139,8 +153,7 @@ export default class WorkerController {
     }
 
     /**
-     * Maneja la búsqueda de trabajadores.
-     * @param {string} searchTerm - Término de búsqueda.
+     * Handler de búsqueda (input search).
      */
     handleSearch(searchTerm) {
         this.currentSearch = searchTerm || null;
@@ -148,8 +161,7 @@ export default class WorkerController {
     }
 
     /**
-     * Maneja el filtro por rol.
-     * @param {string} role - Rol seleccionado.
+     * Handler de filtro por rol (dropdown).
      */
     async handleFilterRole(role) {
         this.currentRoleFilter = role || null;

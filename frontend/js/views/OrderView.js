@@ -21,25 +21,27 @@ export default class OrderView {
 
   showLoading() {
     // Create spinner if not exists
-    let overlay = document.querySelector('.loading-overlay');
+    let overlay = document.querySelector(".loading-overlay");
     if (!overlay) {
-      overlay = document.createElement('div');
-      overlay.className = 'loading-overlay';
+      overlay = document.createElement("div");
+      overlay.className = "loading-overlay";
       overlay.innerHTML = '<div class="spinner"></div>';
       document.body.appendChild(overlay);
     }
-    overlay.style.display = 'flex';
+    overlay.style.display = "flex";
 
     // Disable all buttons
-    document.querySelectorAll('button').forEach(btn => btn.disabled = true);
+    document.querySelectorAll("button").forEach((btn) => (btn.disabled = true));
   }
 
   hideLoading() {
-    const overlay = document.querySelector('.loading-overlay');
-    if (overlay) overlay.style.display = 'none';
+    const overlay = document.querySelector(".loading-overlay");
+    if (overlay) overlay.style.display = "none";
 
     // Enable all buttons
-    document.querySelectorAll('button').forEach(btn => btn.disabled = false);
+    document
+      .querySelectorAll("button")
+      .forEach((btn) => (btn.disabled = false));
   }
 
   /**
@@ -50,7 +52,8 @@ export default class OrderView {
     this.filteredOrders = orders;
 
     // Helper to determine if an option is selected
-    const isSelected = (val) => (filters.estadoNombre === val ? 'selected' : '');
+    const isSelected = (val) =>
+      filters.estadoNombre === val ? "selected" : "";
 
     this.contentArea.innerHTML = `
             <div class="card fade-in">
@@ -69,7 +72,7 @@ export default class OrderView {
                                 placeholder="Buscar..." 
                                 class="form-control pl-5 bg-input text-main"
                                 style="padding-left: 35px; border-radius: 8px;"
-                                value="${filters.search || ''}"
+                                value="${filters.search || ""}"
                             >
                         </div>
                         <button id="newOrderBtn" class="btn btn-success text-white d-flex align-items-center gap-2 px-4 shadow-sm" style="border-radius: 8px;">
@@ -84,11 +87,11 @@ export default class OrderView {
                     <div class="d-flex align-items-center">
                         <label for="filterEstado" class="mr-3 font-weight-500 text-muted mb-0">Filtrar por Estado:</label>
                         <select id="filterEstado" class="form-control bg-input text-main" style="max-width: 200px;">
-                            <option value="" ${isSelected('')}>Todos los estados</option>
-                            <option value="Pendiente" ${isSelected('Pendiente')}>Pendiente</option>
-                            <option value="En Proceso" ${isSelected('En Proceso')}>En Proceso</option>
-                            <option value="Finalizado" ${isSelected('Finalizado')}>Finalizado</option>
-                            <option value="Entregado" ${isSelected('Entregado')}>Entregado</option>
+                            <option value="" ${isSelected("")}>Todos los estados</option>
+                            <option value="Pendiente" ${isSelected("Pendiente")}>Pendiente</option>
+                            <option value="En Proceso" ${isSelected("En Proceso")}>En Proceso</option>
+                            <option value="Finalizado" ${isSelected("Finalizado")}>Finalizado</option>
+                            <option value="Entregado" ${isSelected("Entregado")}>Entregado</option>
                         </select>
                     </div>
                 </div>
@@ -124,13 +127,13 @@ export default class OrderView {
 
     // Restore focus if search was active
     if (filters.search) {
-        requestAnimationFrame(() => {
-            const input = this.contentArea.querySelector("#searchOrders");
-            if (input) {
-                input.focus();
-                input.setSelectionRange(input.value.length, input.value.length);
-            }
-        });
+      requestAnimationFrame(() => {
+        const input = this.contentArea.querySelector("#searchOrders");
+        if (input) {
+          input.focus();
+          input.setSelectionRange(input.value.length, input.value.length);
+        }
+      });
     }
 
     // Attach events to the newly created view root
@@ -213,7 +216,6 @@ export default class OrderView {
     this.onSearch = handler;
   }
 
-
   /**
    * Renderiza las filas de la tabla de órdenes using logic similar to RenderOrderCards but for table.
    */
@@ -237,27 +239,33 @@ export default class OrderView {
         `;
     }
 
-    return orders.map(order => {
-      // Status Badge Logic
-      let statusClass = 'secondary';
-      const s = (order.estado_nombre || '').toLowerCase();
-      if (s.includes('pendiente')) statusClass = 'pendiente';
-      else if (s.includes('proceso')) statusClass = 'proceso';
-      else if (s.includes('finaliz') || s.includes('entregado') || s.includes('completado')) statusClass = 'finalizado';
-      else if (s.includes('cancel')) statusClass = 'cancelado';
+    return orders
+      .map((order) => {
+        // Status Badge Logic
+        let statusClass = "secondary";
+        const s = (order.estado_nombre || "").toLowerCase();
+        if (s.includes("pendiente")) statusClass = "pendiente";
+        else if (s.includes("proceso")) statusClass = "proceso";
+        else if (
+          s.includes("finaliz") ||
+          s.includes("entregado") ||
+          s.includes("completado")
+        )
+          statusClass = "finalizado";
+        else if (s.includes("cancel")) statusClass = "cancelado";
 
-      return `
+        return `
             <tr>
                 <td class="font-weight-bold text-main">#${order.id}</td>
                 <td>
-                    <div class="font-weight-500">${order.cliente_nombre || 'Sin Cliente'}</div>
+                    <div class="font-weight-500">${order.cliente_nombre || "Sin Cliente"}</div>
                 </td>
                 <td>
-                    <div class="font-weight-500">${order.placa || 'N/A'}</div>
-                    <div class="text-xs text-muted">${order.marca || ''} ${order.modelo || ''}</div>
+                    <div class="font-weight-500">${order.placa || "N/A"}</div>
+                    <div class="text-xs text-muted">${order.marca || ""} ${order.modelo || ""}</div>
                 </td>
                 <td>
-                    <div class="font-weight-500 text-secondary">${order.tecnico_nombre || 'Sin Asignar'}</div>
+                    <div class="font-weight-500 text-secondary">${order.tecnico_nombre || "Sin Asignar"}</div>
                 </td>
                 <td>
                     <i class="far fa-calendar-alt text-muted mr-1"></i>
@@ -268,7 +276,7 @@ export default class OrderView {
                 </td>
                 <td>
                     <span class="badge-status ${statusClass}">
-                        ${order.estado_nombre || 'Pendiente'}
+                        ${order.estado_nombre || "Pendiente"}
                     </span>
                 </td>
                 <td>
@@ -279,16 +287,37 @@ export default class OrderView {
                         <button class="btn btn-sm btn-outline-secondary mr-1 btn-edit" data-action="edit" data-id="${order.id}" title="Editar">
                             <i class="fas fa-edit"></i>
                         </button>
-                        ${(s.includes('finaliz') || s.includes('entregado') || s.includes('completado')) ? `
+                        ${
+                          (s.includes("finaliz") ||
+                          s.includes("entregado") ||
+                          s.includes("completado")) && ((order.saldo_pendiente > 0.1) || (!order.pagado_completamente && order.total_pagado < order.total_estimado))
+                            ? `
                         <button class="btn btn-sm btn-outline-success btn-pay" data-action="payment" data-id="${order.id}" title="Cobrar">
                             <i class="fas fa-money-bill-wave"></i>
                         </button>
-                        ` : ''}
+                        `
+                            : ""
+                        }
+                        
+                         ${
+                           (s.includes("finaliz") ||
+                             s.includes("entregado") ||
+                             s.includes("completado")) &&
+                           (order.saldo_pendiente <= 0.1 ||
+                             order.total_pagado >= order.total_estimado)
+                             ? `
+                        <button class="btn btn-sm btn-outline-danger mr-1 btn-invoice" data-action="invoice" data-id="${order.id}" title="Descargar Factura">
+                            <i class="fas fa-file-pdf"></i>
+                        </button>
+                        `
+                             : ""
+                         }
                     </div>
                 </td>
             </tr>
         `;
-    }).join('');
+      })
+      .join("");
   }
 
   /**
@@ -376,15 +405,15 @@ export default class OrderView {
                             <div class="col-6">
                                 <h6 class="text-uppercase text-secondary small font-weight-bold border-bottom pb-1 mb-2">Cliente</h6>
                                 <h5 class="font-weight-bold mb-1 text-main">${order.cliente_nombre || "Sin cliente"}</h5>
-                                <p class="text-secondary small mb-0">CI: ${order.cliente_ci || 'N/A'}</p>
-                                <p class="text-secondary small mb-0">${order.cliente_correo || ''}</p>
-                                <p class="text-secondary small">${order.cliente_telefono || ''}</p>
+                                <p class="text-secondary small mb-0">CI: ${order.cliente_ci || "N/A"}</p>
+                                <p class="text-secondary small mb-0">${order.cliente_correo || ""}</p>
+                                <p class="text-secondary small">${order.cliente_telefono || ""}</p>
                             </div>
                              <div class="col-6">
                                 <h6 class="text-uppercase text-secondary small font-weight-bold border-bottom pb-1 mb-2">Vehículo</h6>
                                 <h5 class="font-weight-bold mb-1 text-main">${order.placa || "N/A"}</h5>
-                                <p class="text-secondary small mb-0">${order.marca || ''} ${order.modelo || ''} ${order.anio || ''}</p>
-                                <p class="text-secondary small">VIN: ${order.vin || 'N/A'}</p>
+                                <p class="text-secondary small mb-0">${order.marca || ""} ${order.modelo || ""} ${order.anio || ""}</p>
+                                <p class="text-secondary small">VIN: ${order.vin || "N/A"}</p>
                             </div>
                         </div>
 
@@ -416,27 +445,39 @@ export default class OrderView {
                                 <tbody>
                                     <!-- Servicios Header -->
                                     <tr class="bg-light"><td colspan="4" class="py-1 px-2 small font-weight-bold text-secondary">SERVICIOS</td></tr>
-                                    ${(order.detalles_servicios && order.detalles_servicios.length > 0) 
-                                        ? order.detalles_servicios.map(s => `
+                                    ${
+                                      order.detalles_servicios &&
+                                      order.detalles_servicios.length > 0
+                                        ? order.detalles_servicios
+                                            .map(
+                                              (s) => `
                                             <tr>
-                                                <td>${s.servicio_nombre || s.servicio?.nombre || 'Servicio'}</td>
+                                                <td>${s.servicio_nombre || s.servicio?.nombre || "Servicio"}</td>
                                                 <td class="text-center">1</td>
                                                 <td class="text-right">${this.formatCurrency(s.precio_aplicado || s.precio)}</td>
                                                 <td class="text-right">${this.formatCurrency(s.precio_aplicado || s.precio)}</td>
-                                            </tr>`).join('') 
+                                            </tr>`,
+                                            )
+                                            .join("")
                                         : '<tr><td colspan="4" class="text-muted small font-italic pl-3">Sin servicios registrados</td></tr>'
                                     }
 
                                     <!-- Repuestos Header -->
                                     <tr class="bg-light"><td colspan="4" class="py-1 px-2 small font-weight-bold text-secondary mt-2">REPUESTOS</td></tr>
-                                    ${(order.detalles_repuestos && order.detalles_repuestos.length > 0)
-                                        ? order.detalles_repuestos.map(r => `
+                                    ${
+                                      order.detalles_repuestos &&
+                                      order.detalles_repuestos.length > 0
+                                        ? order.detalles_repuestos
+                                            .map(
+                                              (r) => `
                                             <tr>
-                                                <td>${r.repuesto_nombre || r.repuesto?.nombre || 'Repuesto'}</td>
+                                                <td>${r.repuesto_nombre || r.repuesto?.nombre || "Repuesto"}</td>
                                                 <td class="text-center">${r.cantidad}</td>
                                                 <td class="text-right">${this.formatCurrency(r.precio_unitario_aplicado || r.precio)}</td>
-                                                <td class="text-right">${this.formatCurrency((r.cantidad * (r.precio_unitario_aplicado || r.precio)))}</td>
-                                            </tr>`).join('')
+                                                <td class="text-right">${this.formatCurrency(r.cantidad * (r.precio_unitario_aplicado || r.precio))}</td>
+                                            </tr>`,
+                                            )
+                                            .join("")
                                         : '<tr><td colspan="4" class="text-muted small font-italic pl-3">Sin repuestos registrados</td></tr>'
                                     }
                                 </tbody>
@@ -454,7 +495,7 @@ export default class OrderView {
                                     <span>Pagado</span>
                                     <span>Bs. ${this.formatCurrency(order.total_pagado || 0)}</span>
                                 </div>
-                                <div class="d-flex justify-content-between text-${(order.saldo_pendiente > 0) ? 'danger' : 'success'} small font-weight-bold">
+                                <div class="d-flex justify-content-between text-${order.saldo_pendiente > 0 ? "danger" : "success"} small font-weight-bold">
                                     <span>Saldo Pendiente</span>
                                     <span>Bs. ${this.formatCurrency(order.saldo_pendiente || order.total_estimado)}</span>
                                 </div>
@@ -483,23 +524,26 @@ export default class OrderView {
 
   _renderInlinePaymentButton(order) {
     // Normalizar estado (remover espacios y normalizar mayúsculas/minúsculas si es necesario)
-    const status = (order.estado_nombre || '').trim();
-    
+    const status = (order.estado_nombre || "").trim();
+
     // Lista de estados considerados "Finalizados" que permiten cobro
-    const finalStates = ['Finalizado', 'Entregado', 'Completado'];
-    
+    const finalStates = ["Finalizado", "Entregado", "Completado"];
+
     const isFinished = finalStates.includes(status);
-    const saldo = order.saldo_pendiente !== undefined ? parseFloat(order.saldo_pendiente) : parseFloat(order.total_estimado || 0);
+    const saldo =
+      order.saldo_pendiente !== undefined
+        ? parseFloat(order.saldo_pendiente)
+        : parseFloat(order.total_estimado || 0);
 
     // Solo mostrar si está finalizado y tiene saldo pendiente mayor a 0
     if (isFinished && saldo > 0.1) {
-        return `
+      return `
             <button class="btn btn-success px-4 rounded-pill shadow-sm ms-2" data-action="payment" data-id="${order.id}">
                 <i class="fas fa-credit-card me-2"></i> Cobrar
             </button>
         `;
     }
-    return '';
+    return "";
   }
 
   /**
@@ -507,11 +551,16 @@ export default class OrderView {
    */
   renderPaymentButton(order) {
     // Normalizar estado
-    const status = (order.estado_nombre || '').trim();
+    const status = (order.estado_nombre || "").trim();
     // Permitir estados finales
-    const isFinished = ['Finalizado', 'Entregado', 'Completado'].includes(status);
+    const isFinished = ["Finalizado", "Entregado", "Completado"].includes(
+      status,
+    );
     // Verificar saldo
-    const saldo = order.saldo_pendiente !== undefined ? parseFloat(order.saldo_pendiente) : parseFloat(order.total_estimado || 0);
+    const saldo =
+      order.saldo_pendiente !== undefined
+        ? parseFloat(order.saldo_pendiente)
+        : parseFloat(order.total_estimado || 0);
     const hasPendingBalance = saldo > 0.1;
 
     // SIEMPRE mostrar botón
@@ -570,25 +619,25 @@ export default class OrderView {
                     </thead>
                     <tbody>
                         ${list
-        .map((s) => {
-          // Backend envía 'servicio_nombre'
-          const nombre =
-            s.servicio_nombre ||
-            (s.servicio
-              ? s.servicio.nombre
-              : "Servicio Desconocido");
-          const precio =
-            s.precio_aplicado !== undefined
-              ? Number(s.precio_aplicado)
-              : Number(s.precio) || 0;
-          return `
+                          .map((s) => {
+                            // Backend envía 'servicio_nombre'
+                            const nombre =
+                              s.servicio_nombre ||
+                              (s.servicio
+                                ? s.servicio.nombre
+                                : "Servicio Desconocido");
+                            const precio =
+                              s.precio_aplicado !== undefined
+                                ? Number(s.precio_aplicado)
+                                : Number(s.precio) || 0;
+                            return `
                                 <tr>
                                     <td>${nombre}</td>
                                     <td>Bs. ${this.formatCurrency(precio)}</td>
                                 </tr>
                             `;
-        })
-        .join("")}
+                          })
+                          .join("")}
                     </tbody>
                 </table>
             </div>
@@ -624,21 +673,21 @@ export default class OrderView {
                     </thead>
                     <tbody>
                         ${list
-        .map((r) => {
-          // Backend envía 'repuesto_nombre'
-          const nombre =
-            r.repuesto_nombre ||
-            (r.repuesto
-              ? r.repuesto.nombre
-              : "Repuesto Desconocido");
-          const cantidad = Number(r.cantidad) || 0;
-          const precio =
-            r.precio_unitario_aplicado !== undefined
-              ? Number(r.precio_unitario_aplicado)
-              : Number(r.precio) || 0;
-          const subtotal = cantidad * precio;
+                          .map((r) => {
+                            // Backend envía 'repuesto_nombre'
+                            const nombre =
+                              r.repuesto_nombre ||
+                              (r.repuesto
+                                ? r.repuesto.nombre
+                                : "Repuesto Desconocido");
+                            const cantidad = Number(r.cantidad) || 0;
+                            const precio =
+                              r.precio_unitario_aplicado !== undefined
+                                ? Number(r.precio_unitario_aplicado)
+                                : Number(r.precio) || 0;
+                            const subtotal = cantidad * precio;
 
-          return `
+                            return `
                                 <tr>
                                     <td>${nombre}</td>
                                     <td class="text-center">${cantidad}</td>
@@ -646,8 +695,8 @@ export default class OrderView {
                                     <td>Bs. ${this.formatCurrency(subtotal)}</td>
                                 </tr>
                             `;
-        })
-        .join("")}
+                          })
+                          .join("")}
                     </tbody>
                 </table>
             </div>
@@ -693,14 +742,25 @@ export default class OrderView {
                                     <label for="editOrderClient" class="small font-weight-bold">Cliente *</label>
                                     <select id="editOrderClient" name="client_id" class="form-control form-control-sm" required>
                                         <option value="">Seleccionar cliente...</option>
-                                        ${(formData.clients || []).map(c => `<option value="${c.id}" ${c.id == currentClientId ? "selected" : ""}>${c.nombre} ${c.apellido || ""}</option>`).join("")}
+                                        ${(formData.clients || []).map((c) => `<option value="${c.id}" ${c.id == currentClientId ? "selected" : ""}>${c.nombre} ${c.apellido || ""}</option>`).join("")}
                                     </select>
                                 </div>
                                 <div class="form-group mb-3">
                                     <label for="editOrderAuto" class="small font-weight-bold">Vehículo *</label>
                                     <select id="editOrderAuto" name="auto_id" class="form-control form-control-sm" required>
-                                        ${currentClientId 
-                                            ? (formData.vehicles || []).filter(v => v.cliente_id == currentClientId).map(v => `<option value="${v.id}" ${v.id == order.auto_id ? "selected" : ""}>${v.marca} ${v.modelo} (${v.placa})</option>`).join("")
+                                        ${
+                                          currentClientId
+                                            ? (formData.vehicles || [])
+                                                .filter(
+                                                  (v) =>
+                                                    v.cliente_id ==
+                                                    currentClientId,
+                                                )
+                                                .map(
+                                                  (v) =>
+                                                    `<option value="${v.id}" ${v.id == order.auto_id ? "selected" : ""}>${v.marca} ${v.modelo} (${v.placa})</option>`,
+                                                )
+                                                .join("")
                                             : '<option value="">Seleccione un cliente primero</option>'
                                         }
                                     </select>
@@ -715,13 +775,13 @@ export default class OrderView {
                                         <label for="editTecnico" class="small font-weight-bold">Técnico *</label>
                                         <select id="editTecnico" name="tecnico_id" class="form-control form-control-sm" required>
                                             <option value="">Seleccionar...</option>
-                                            ${(formData.tecnicos || []).map(t => `<option value="${t.id}" ${t.id == order.tecnico_id ? "selected" : ""}>${t.nombre} ${t.apellido_p || ""}</option>`).join("")}
+                                            ${(formData.tecnicos || []).map((t) => `<option value="${t.id}" ${t.id == order.tecnico_id ? "selected" : ""}>${t.nombre} ${t.apellido_p || ""}</option>`).join("")}
                                         </select>
                                     </div>
                                     <div class="col-md-6 form-group mb-3">
                                         <label for="editEstado" class="small font-weight-bold">Estado *</label>
                                         <select id="editEstado" name="estado_id" class="form-control form-control-sm" required>
-                                            ${(formData.estados || []).map(e => `<option value="${e.id}" ${e.id == order.estado_id ? "selected" : ""}>${e.nombre_estado}</option>`).join("")}
+                                            ${(formData.estados || []).map((e) => `<option value="${e.id}" ${e.id == order.estado_id ? "selected" : ""}>${e.nombre_estado}</option>`).join("")}
                                         </select>
                                     </div>
                                 </div>
@@ -826,9 +886,13 @@ export default class OrderView {
                                 <label for="newOrderClient" class="form-label font-weight-bold small text-uppercase">Cliente *</label>
                                 <select id="newOrderClient" name="client_id" class="form-control form-select shadow-sm" required>
                                     <option value="">Seleccionar cliente...</option>
-                                    ${(clients || []).map(c => `
-                                        <option value="${c.id}">${c.nombre} ${c.apellido_p || ''} ${c.ci ? `(${c.ci})` : ''}</option>
-                                    `).join('')}
+                                    ${(clients || [])
+                                      .map(
+                                        (c) => `
+                                        <option value="${c.id}">${c.nombre} ${c.apellido_p || ""} ${c.ci ? `(${c.ci})` : ""}</option>
+                                    `,
+                                      )
+                                      .join("")}
                                 </select>
                             </div>
 
@@ -848,9 +912,13 @@ export default class OrderView {
                                 <label for="newOrderTecnico" class="form-label font-weight-bold small text-uppercase">Técnico Asignado</label>
                                 <select id="newOrderTecnico" name="tecnico_id" class="form-control form-select shadow-sm">
                                     <option value="">Sin asignar</option>
-                                    ${(tecnicos || []).map(t => `
-                                        <option value="${t.id}">${t.nombre} ${t.apellido_p || ''}</option>
-                                    `).join('')}
+                                    ${(tecnicos || [])
+                                      .map(
+                                        (t) => `
+                                        <option value="${t.id}">${t.nombre} ${t.apellido_p || ""}</option>
+                                    `,
+                                      )
+                                      .join("")}
                                 </select>
                             </div>
 
@@ -907,48 +975,61 @@ export default class OrderView {
     const clientSelect = modal.querySelector("#newOrderClient");
     const autoSelect = modal.querySelector("#newOrderAuto");
 
-    clientSelect.addEventListener('change', () => {
+    clientSelect.addEventListener("change", () => {
       const clientId = clientSelect.value;
-      autoSelect.innerHTML = '<option value="">Seleccionar vehículo...</option>';
+      autoSelect.innerHTML =
+        '<option value="">Seleccionar vehículo...</option>';
       autoSelect.disabled = true;
-      autoSelect.classList.remove('border-danger');
+      autoSelect.classList.remove("border-danger");
 
       if (clientId) {
-        const clientVehicles = (vehicles || []).filter(v => v.cliente_id == clientId || v.client_id == clientId);
+        const clientVehicles = (vehicles || []).filter(
+          (v) => v.cliente_id == clientId || v.client_id == clientId,
+        );
 
         if (clientVehicles.length > 0) {
           autoSelect.disabled = false;
-          clientVehicles.forEach(v => {
-            const option = document.createElement('option');
+          clientVehicles.forEach((v) => {
+            const option = document.createElement("option");
             option.value = v.id;
             option.textContent = `${v.marca} ${v.modelo} - ${v.placa}`;
             autoSelect.appendChild(option);
           });
         } else {
-          const option = document.createElement('option');
+          const option = document.createElement("option");
           option.textContent = "-- Cliente sin vehículos --";
           autoSelect.appendChild(option);
         }
       } else {
-        const option = document.createElement('option');
+        const option = document.createElement("option");
         option.textContent = "Seleccione un cliente primero";
         autoSelect.appendChild(option);
       }
     });
 
     // Attach Validation Logic on Submit
-    const form = modal.querySelector('#newOrderForm');
-    form.addEventListener('submit', (e) => {
+    const form = modal.querySelector("#newOrderForm");
+    form.addEventListener("submit", (e) => {
       e.preventDefault();
 
       let isValid = true;
-      const requiredIds = ['newOrderClient', 'newOrderAuto', 'newOrderProblema', 'newOrderTecnico', 'newOrderEstado'];
+      const requiredIds = [
+        "newOrderClient",
+        "newOrderAuto",
+        "newOrderProblema",
+        "newOrderTecnico",
+        "newOrderEstado",
+      ];
 
-      requiredIds.forEach(id => {
+      requiredIds.forEach((id) => {
         const el = document.getElementById(id);
         if (!el.value.trim()) {
-          el.classList.add('is-invalid'); // Bootstrap class
-          el.addEventListener('input', () => el.classList.remove('is-invalid'), { once: true });
+          el.classList.add("is-invalid"); // Bootstrap class
+          el.addEventListener(
+            "input",
+            () => el.classList.remove("is-invalid"),
+            { once: true },
+          );
           isValid = false;
         }
       });
@@ -962,7 +1043,7 @@ export default class OrderView {
         fecha_ingreso: form.fecha_ingreso.value,
         problema_reportado: form.problema_reportado.value,
         total_estimado: form.total_estimado.value || 0,
-        estado_id: 1 // Default ID for Pendiente
+        estado_id: 1, // Default ID for Pendiente
       };
 
       if (this.onSubmitNewOrder) {
@@ -1180,7 +1261,7 @@ export default class OrderView {
     return date.toLocaleDateString("es-BO", {
       year: "numeric",
       month: "long",
-      day: "numeric"
+      day: "numeric",
     });
   }
 
@@ -1218,7 +1299,7 @@ export default class OrderView {
                 </div>
                 
                 <div class="modal-body p-0">
-                    <form id="newOrderForm" class="invoice-box p-4" style="max-width: 800px; margin: auto; padding: 30px; border: 1px solid #eee; box-shadow: 0 0 10px rgba(0, 0, 0, .15); font-size: 16px; line-height: 24px;">
+                    <form id="newOrderForm" class="invoice-box p-4" style="max-width: 800px; margin: auto; padding: 30px; border: 1px solid #eee; box-shadow: 0 0 10px rgba(0, 0, 0, .15); font-size: 16px; line-height: 24px;" novalidate>
                         
                         <!-- Header -->
                         <div class="border-bottom pb-3 mb-4">
@@ -1235,7 +1316,7 @@ export default class OrderView {
                                     <label for="newOrderClient" class="small font-weight-bold">Cliente *</label>
                                     <select id="newOrderClient" name="client_id" class="form-control form-control-sm" required>
                                         <option value="">Seleccionar cliente...</option>
-                                        ${(data.clients || []).map(c => `<option value="${c.id}">${c.nombre} ${c.apellido || ""}</option>`).join("")}
+                                        ${(data.clients || []).map((c) => `<option value="${c.id}">${c.nombre} ${c.apellido || ""}</option>`).join("")}
                                     </select>
                                 </div>
                                 <div class="form-group mb-3">
@@ -1254,13 +1335,13 @@ export default class OrderView {
                                         <label for="newOrderTecnico" class="small font-weight-bold">Técnico *</label>
                                         <select id="newOrderTecnico" name="tecnico_id" class="form-control form-control-sm" required>
                                             <option value="">Seleccionar...</option>
-                                            ${(data.tecnicos || []).map(t => `<option value="${t.id}">${t.nombre} ${t.apellido_p || ""}</option>`).join("")}
+                                            ${(data.tecnicos || []).map((t) => `<option value="${t.id}">${t.nombre} ${t.apellido_p || ""}</option>`).join("")}
                                         </select>
                                     </div>
                                     <div class="col-md-6 form-group mb-3">
                                         <label for="newOrderEstado" class="small font-weight-bold">Estado Inicial *</label>
                                         <select id="newOrderEstado" name="estado_id" class="form-control form-control-sm" required>
-                                            ${(data.estados || []).map(e => `<option value="${e.id}">${e.nombre_estado}</option>`).join("")}
+                                            ${(data.estados || []).map((e) => `<option value="${e.id}">${e.nombre_estado}</option>`).join("")}
                                         </select>
                                     </div>
                                 </div>
@@ -1378,14 +1459,14 @@ export default class OrderView {
                     <select class="form-control service-select" name="servicios[${index}][servicio_id]" required>
                         <option value="">Seleccionar Servicio...</option>
                         ${allServices
-        .map(
-          (s) => `
+                          .map(
+                            (s) => `
                             <option value="${s.id}" data-price="${s.precio}" ${s.id == selectedId ? "selected" : ""}>
                                 ${s.nombre}
                             </option>
                         `,
-        )
-        .join("")}
+                          )
+                          .join("")}
                     </select>
                 </td>
                 <td>
@@ -1449,14 +1530,14 @@ export default class OrderView {
                     <select class="form-control part-select" name="repuestos[${index}][repuesto_id]" required>
                         <option value="">Seleccionar Repuesto...</option>
                         ${allParts
-        .map(
-          (p) => `
+                          .map(
+                            (p) => `
                             <option value="${p.id}" data-price="${p.precio_venta}" data-stock="${p.stock}" ${p.id == selectedId ? "selected" : ""}>
                                 ${p.nombre} (Stock: ${p.stock})
                             </option>
                         `,
-        )
-        .join("")}
+                          )
+                          .join("")}
                     </select>
                 </td>
                 <td>
@@ -1493,26 +1574,30 @@ export default class OrderView {
         const currentSelect = e.target;
         const selectedValue = currentSelect.value;
         const row = currentSelect.closest("tr");
-        
+
         // Validation: Check for duplicates
         let isDuplicate = false;
-        modal.querySelectorAll(".service-select").forEach(select => {
-            if (select !== currentSelect && select.value === selectedValue && selectedValue !== "") {
-                isDuplicate = true;
-            }
+        modal.querySelectorAll(".service-select").forEach((select) => {
+          if (
+            select !== currentSelect &&
+            select.value === selectedValue &&
+            selectedValue !== ""
+          ) {
+            isDuplicate = true;
+          }
         });
 
         if (isDuplicate) {
-            alert("Este servicio ya ha sido agregado a la orden.");
-            currentSelect.value = ""; // Reset
-            row.querySelector(".service-price").value = "0.00";
-            this.calculateTotal(modal);
-            return;
+          alert("Este servicio ya ha sido agregado a la orden.");
+          currentSelect.value = ""; // Reset
+          row.querySelector(".service-price").value = "0.00";
+          this.calculateTotal(modal);
+          return;
         }
 
         const option = currentSelect.options[currentSelect.selectedIndex];
         const price = option.getAttribute("data-price") || 0;
-        
+
         row.querySelector(".service-price").value =
           parseFloat(price).toFixed(2);
         this.calculateTotal(modal);
@@ -1634,12 +1719,65 @@ export default class OrderView {
     form.addEventListener("submit", (e) => {
       e.preventDefault();
 
+      // Validación Manual
+      let isValid = true;
+      const requiredFields = [
+          { id: "newOrderClient", name: "Cliente" },
+          { id: "newOrderAuto", name: "Vehículo" },
+          { id: "newOrderTecnico", name: "Técnico" },
+          { id: "newOrderEstado", name: "Estado" },
+          { id: "newOrderFechaIngreso", name: "Fecha de Ingreso" },
+          { id: "newOrderProblema", name: "Problema Reportado" }
+      ];
+
+      // Limpiar validaciones previas
+      modal.querySelectorAll(".is-invalid").forEach(el => el.classList.remove("is-invalid"));
+
+      requiredFields.forEach(field => {
+          const el = modal.querySelector(`#${field.id}`);
+          if (el && !el.value.trim()) {
+              el.classList.add("is-invalid");
+              isValid = false;
+              // Agregar listener para remover la clase al escribir
+              el.addEventListener("input", () => el.classList.remove("is-invalid"), { once: true });
+          }
+      });
+
+      // Validar tablas de servicios (si se agregaron filas, deben tener servicio seleccionado)
+      modal.querySelectorAll("#servicesTableBody tr").forEach((row) => {
+        const select = row.querySelector(".service-select");
+        if (select && !select.value) {
+             select.classList.add("is-invalid");
+             select.addEventListener("change", () => select.classList.remove("is-invalid"), { once: true });
+             isValid = false;
+        }
+      });
+
+       // Validar tablas de repuestos (si se agregaron filas, deben tener repuesto seleccionado)
+       modal.querySelectorAll("#partsTableBody tr").forEach((row) => {
+        const select = row.querySelector(".part-select");
+        if (select && !select.value) {
+             select.classList.add("is-invalid");
+             select.addEventListener("change", () => select.classList.remove("is-invalid"), { once: true });
+             isValid = false;
+        }
+      });
+
+      if (!isValid) {
+          alert("Por favor, complete todos los campos obligatorios marcados en rojo.");
+          return;
+      }
+
       // Recolectar Servicios (IDs)
       const servicios = [];
       modal.querySelectorAll("#servicesTableBody tr").forEach((row) => {
         const select = row.querySelector(".service-select");
+        const priceInput = row.querySelector(".service-price");
         if (select && select.value) {
-          servicios.push(parseInt(select.value));
+          servicios.push({
+              servicio_id: parseInt(select.value),
+              precio_aplicado: priceInput ? parseFloat(priceInput.value) : 0
+          });
         }
       });
 
@@ -1648,6 +1786,7 @@ export default class OrderView {
       modal.querySelectorAll("#partsTableBody tr").forEach((row) => {
         const select = row.querySelector(".part-select");
         const qty = row.querySelector(".part-qty");
+        const price = row.querySelector(".part-subtotal"); // Just for ref if needed, but we need unit price logic which is in select data-price
 
         if (select && select.value) {
           repuestos.push({
@@ -1658,6 +1797,7 @@ export default class OrderView {
       });
 
       const formData = {
+        cliente_id: form.client_id.value, // Added missing field
         auto_id: form.auto_id.value,
         tecnico_id: form.tecnico_id.value,
         problema_reportado: form.problema_reportado.value,
@@ -1668,7 +1808,13 @@ export default class OrderView {
         total_estimado: form.total_estimado.value
           ? parseFloat(form.total_estimado.value)
           : 0,
-        servicios: servicios,
+        servicios: servicios.map(s => s.servicio_id), // Controller expects array of IDs or objects? Controller expects just IDs usually for create?
+        // Wait, OrderController.js line 220: ...formData.
+        // And OrderModel.createOrder?
+        // Let's check OrderModel. But typically CREATE accepts array of IDs or objects.
+        // The original code was: servicios.push(parseInt(select.value)); -> Array of IDs.
+        // So I will revert to Array of IDs for services to be safe, matching original logic.
+        servicios: servicios.map(s => s.servicio_id),
         repuestos: repuestos,
       };
 

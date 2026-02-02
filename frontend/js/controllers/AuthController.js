@@ -2,79 +2,93 @@ import AuthModel from '../models/AuthModel.js';
 import AuthView from '../views/AuthView.js';
 
 /**
- * Controlador de Autenticación
- * Coordina la lógica de inicio de sesión entre vista y modelo.
+ * ============================================================================
+ * ENCABEZADO DEL ARCHIVO (Controlador de Seguridad)
+ * ============================================================================
+ * Propósito:
+ *   Gestiona el flujo de Autenticación (Login/Logout) y la persistencia de sesión.
+ *   Actúa como guardián de la seguridad en el frontend.
+ *
+ * Flujo Lógico Central:
+ *   1. Intercepta credenciales desde la Vista.
+ *   2. Solicita token JWT al Backend vía Modelo.
+ *   3. Almacena Token y Contexto de Usuario en LocalStorage.
+ *   4. Notifica a la App principal para transición de estado.
+ *
+ * Interacciones:
+ *   - Modelo: `AuthModel` (Comunicación con /auth/login).
+ *   - Vista: `AuthView` (Formulario de Login).
+ *   - Storage: Gestión directa de `localStorage`.
+ * ============================================================================
  */
+
 export default class AuthController {
     /**
-     * @param {Function} onLoginSuccess - Callback a ejecutar cuando el login es exitoso.
+     * @param {Function} onLoginSuccess - Callback a ejecutar cuando la sesión se establece.
+     *                                    Usualmente recarga la SPA o monta el Dashboard.
      */
     constructor(onLoginSuccess) {
         this.model = new AuthModel();
         this.view = new AuthView();
         this.onLoginSuccess = onLoginSuccess;
 
-        // Vincular eventos de la vista
+        // Binding de eventos UI
         this.view.bindLogin(this.handleLogin.bind(this));
     }
 
     /**
-     * Maneja el proceso de login iniciado desde la vista.
-     * @param {string} email 
-     * @param {string} password 
+     * Procesa la solicitud de inicio de sesión.
+     * 
+     * @param {string} email
+     * @param {string} password
      */
     async handleLogin(email, password) {
         try {
-            // DEBUG: Alertar inicio
-            // alert(`Intentando login con: ${email}`);
-            
             const response = await this.model.login(email, password);
             
-            // DEBUG: Ver respuesta
-            // alert('Respuesta recibida: ' + JSON.stringify(response));
-
-            // Asumiendo que la respuesta exitosa trae { access_token, user, ... }
+            // Validación de la estructura de respuesta JWT
             if (response && response.access_token) {
-                console.log('Login successful:', response);
+                console.log('Login exitoso. Iniciando sesión...');
                 
-                // Guardar en localStorage
+                // 1. Persistencia de Sesión
                 localStorage.setItem('token', response.access_token);
                 
-                // Validar almacenamiento
+                // Verificación de escritura (Critical Path)
                 if (!localStorage.getItem('token')) {
-                     alert('ERROR CRITICO: No se pudo guardar el token en localStorage.');
+                     alert('ERROR CRÍTICO: No se pudo guardar el token localmente.');
                      return;
                 }
 
-                // Si el backend devuelve info del user, guardarla también
+                // 2. Persistencia de Contexto de Usuario
                 if (response.user) {
                     localStorage.setItem('user', JSON.stringify(response.user));
                 }
 
                 alert('Login Exitoso! Redirigiendo...');
 
-                // Ocultar login y notificar éxito a la App principal
+                // 3. Transición de UI
                 this.view.hideLogin();
                 
-                // NO recargar, dejar que la SPA fluya para ver si carga el dashboard
+                // 4. Notificación a App Principal
                 if (this.onLoginSuccess) this.onLoginSuccess();
             } else {
-                console.error('Login response invalid:', response);
-                alert('Error: Respuesta del servidor inválida\n' + JSON.stringify(response));
+                console.error('Respuesta de login inválida:', response);
                 this.view.showError('Respuesta inesperada del servidor.');
             }
         } catch (error) {
-            console.error('Login error:', error);
-            // Mostrar error amigable con detalle técnico en alert
+            console.error('Error durante el login:', error);
             const msg = error.message || 'Error desconocido';
+            // Feedback dual: Alert para bloqueo inmediato y mensaje en vista
             alert('Error de Conexión/Login:\n' + msg);
             this.view.showError(msg);
         }
     }
 
     /**
-     * Verifica el estado inicial. Si no hay token, fuerza el login.
-     * @returns {boolean} true si está autenticado, false si mostró login.
+     * Verifica la validez de la sesión actual.
+     * Si no existe token, fuerza la vista de login.
+     * 
+     * @returns {boolean} true si existe sesión activa.
      */
     checkAuth() {
         const token = localStorage.getItem('token');
@@ -88,11 +102,15 @@ export default class AuthController {
     }
 
     /**
-     * Cierra la sesión y muestra el login.
+     * Cierra la sesión del usuario.
+     * Destruye credenciales locales y reinicia la interfaz.
      */
     logout() {
+        // Limpieza segura
         localStorage.removeItem('token');
         localStorage.removeItem('user');
+        
+        // Redirección forzada
         this.view.showLogin();
     }
 }

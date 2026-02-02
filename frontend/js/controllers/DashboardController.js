@@ -1,11 +1,26 @@
 /**
- * Controlador del Dashboard
- * Coordina la obtención de datos y el renderizado de la vista principal.
+ * ============================================================================
+ * ENCABEZADO DEL ARCHIVO (Controlador)
+ * ============================================================================
+ * Propósito:
+ *   Orquesta la lógica del área de trabajo "Dashboard" (Tablero de Control).
+ *   Es el intermediario entre los datos de negocio (Modelo) y la representación visual (Vista).
+ *
+ * Flujo Lógico Central:
+ *   1. Solicitud de métricas (KPIs) al modelo.
+ *   2. Manejo de estados de carga y error.
+ *   3. Inyección de datos en la vista para renderizado de gráficos y tarjetas.
+ *
+ * Interacciones:
+ *   - Modelo: `DashboardModel` (Obtiene datos del backend).
+ *   - Vista: `DashboardView` (Renderiza HTML/Charts).
+ * ============================================================================
  */
+
 export default class DashboardController {
     /**
-     * @param {DashboardModel} model
-     * @param {DashboardView} view
+     * @param {DashboardModel} model - Capa de acceso a datos.
+     * @param {DashboardView} view - Capa de presentación visual.
      */
     constructor(model, view) {
         this.model = model;
@@ -13,31 +28,31 @@ export default class DashboardController {
     }
 
     /**
-     * Inicializa el dashboard: carga datos y renderiza.
+     * Inicializa el flujo del controlador.
+     * Patrón: Fetch-then-Render.
      */
     async init() {
         try {
-            // Mostrar estado de carga (opcional, podría delegarse a la vista)
+            // 1. Renderizado Optimista: Feedback instantáneo al usuario
             this.view.appContent.innerHTML = '<p class="text-center p-4">Cargando métricas...</p>';
 
+            // 2. Obtención de Datos (Asíncrono)
             const data = await this.model.getDashboardData();
             
-            // Validar si la respuesta es vacía (null o undefined)
+            // 3. Validación de Respuesta
             if (!data) {
-                // Renderizar con ceros si no hay datos pero no falló
+                // Estado "Empty": No falló, pero no hay datos relevantes
+                console.warn('DashboardController: Datos vacíos, renderizando estado por defecto.');
                 this.view.render({}); 
                 return;
             }
 
+            // 4. Renderizado Final
             this.view.render(data);
 
-            // Listen for updates from other controllers (e.g. OrderController)
-            window.addEventListener('order-updated', () => {
-                console.log('DashboardController: Refreshing data due to external update...');
-                this.init(); // Reload data
-            });
         } catch (error) {
-            console.error('Error inicializando DashboardController:', error);
+            // Manejo Centralizado de Errores de UI
+            console.error('Error crítico en DashboardController:', error);
             this.view.showError('Hubo un problema al conectar con el servidor.');
         }
     }

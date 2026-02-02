@@ -1,3 +1,5 @@
+import Toast from '../utils/toast.js';
+
 /**
  * Vista de Trabajadores
  * Maneja la renderización de la interfaz de gestión de trabajadores.
@@ -336,11 +338,11 @@ export default class WorkerView {
     }
 
     showError(message) {
-        alert('Error: ' + message);
+        Toast.error(message);
     }
 
     showSuccess(message) {
-        alert('Éxito: ' + message);
+        Toast.success(message);
     }
 
     getRoleBadge(rol) {

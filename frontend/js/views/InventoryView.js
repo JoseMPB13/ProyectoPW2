@@ -1,3 +1,5 @@
+import Toast from '../utils/toast.js';
+
 export default class InventoryView {
     constructor() {
         this.contentArea = document.getElementById('contentArea');
@@ -238,6 +240,6 @@ export default class InventoryView {
         }
     }
 
-    showSuccess(msg) { alert(msg); }
-    showError(msg) { alert(msg); }
+    showSuccess(msg) { Toast.success(msg); }
+    showError(msg) { Toast.error(msg); }
 }

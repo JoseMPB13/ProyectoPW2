@@ -1,7 +1,0 @@
-Login Attempt: {'email': 'admin@taller.com', 'password': 'admin123'}
-Login Result for admin@taller.com: SUCCESS
-Login Attempt: {'email': 'admin@taller.com', 'password': 'admin123'}
-Login Result for admin@taller.com: SUCCESS
-Login Attempt: {'email': 'admin@taller.com', 'password': 'admin123'}
-Login Attempt: {'email': 'admin@taller.com', 'password': 'admin123'}
-Login Result for admin@taller.com: SUCCESS
